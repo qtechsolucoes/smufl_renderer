@@ -6,7 +6,10 @@
       "Read(//c/Users/aless/OneDrive/Área de Trabalho/**)",
       "Bash(nc:*)",
       "WebFetch(domain:w3c.github.io)",
-      "Read(//c/Users/aless/Downloads/**)"
+      "Read(//c/Users/aless/Downloads/**)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(q)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

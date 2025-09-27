@@ -26,29 +26,44 @@ class SmuflCoordinates {
   /// Calcula o staff space baseado na fonte
   /// @param fontSize Tamanho da fonte em pixels
   static double getStaffSpaceFromFontSize(double fontSize) {
-    // No SMuFL, o staff space é aproximadamente 1/4 do tamanho da fonte
+    // No SMuFL, o staff space é 1/4 do tamanho da fonte Bravura
+    // Para Bravura, o staff space é exatamente fontSize / 4.0
     return fontSize / 4.0;
   }
 
   /// Calcula a altura de uma linha do pentagrama
   /// @param staffSpace Tamanho do staff space
   static double getStaffLineThickness(double staffSpace) {
-    // Padrão SMuFL: aproximadamente 1/8 do staff space
-    return staffSpace / 8.0;
+    // Valor oficial do Bravura metadata: 0.13 staff spaces
+    return staffSpace * 0.13;
   }
 
   /// Calcula a espessura de uma haste
   /// @param staffSpace Tamanho do staff space
   static double getStemThickness(double staffSpace) {
-    // Padrão SMuFL: aproximadamente 1/8 do staff space
-    return staffSpace / 8.0;
+    // Valor oficial do Bravura metadata: 0.12 staff spaces
+    return staffSpace * 0.12;
   }
 
   /// Calcula a altura padrão de uma haste
   /// @param staffSpace Tamanho do staff space
   static double getStemHeight(double staffSpace) {
-    // Padrão SMuFL: 3.5 staff spaces
+    // Padrão oficial SMuFL: 3.5 staff spaces
     return staffSpace * 3.5;
+  }
+
+  /// Calcula a espessura das linhas suplementares
+  /// @param staffSpace Tamanho do staff space
+  static double getLedgerLineThickness(double staffSpace) {
+    // Valor oficial do Bravura metadata: 0.16 staff spaces
+    return staffSpace * 0.16;
+  }
+
+  /// Calcula a extensão das linhas suplementares
+  /// @param staffSpace Tamanho do staff space
+  static double getLedgerLineExtension(double staffSpace) {
+    // Valor oficial do Bravura metadata: 0.4 staff spaces
+    return staffSpace * 0.4;
   }
 }
 

@@ -87,6 +87,7 @@ class Rest extends MusicalElement {
   Rest({required this.duration, this.ornaments = const []});
 }
 
+
 /// Representa uma linha de compasso.
 class Barline extends MusicalElement {}
 

@@ -19,19 +19,19 @@ class LayoutEngine {
   final double availableWidth;
   final double staffSpace;
 
-  // Espaçamentos baseados em SMuFL/Bravura (em staff spaces)
+  // Espaçamentos baseados no metadata oficial do Bravura (em staff spaces)
 
-  // A largura da clave de Sol padrão (gClef).
-  static const double clefWidth = 2.684;
+  // Larguras oficiais dos glifos do Bravura metadata
+  static const double gClefWidth = 2.684; // gClef bounding box width
+  static const double fClefWidth = 2.756; // fClef bounding box width (2.736 - (-0.02))
+  static const double cClefWidth = 2.796; // cClef bounding box width
+  static const double noteheadBlackWidth = 1.18; // noteheadBlack official width
+  static const double accidentalSharpWidth = 1.116; // accidentalSharp width
+  static const double accidentalFlatWidth = 1.18; // accidentalFlat width
 
-  // A largura da cabeça de nota preta padrão (noteheadBlack).
-  static const double noteheadWidth = 1.18;
-
-  // Usando a largura do sustenido (accidentalSharp), que é o acidente comum mais largo.
-  static const double accidentalWidth = 0.996;
-
-  // O espaço padrão de separação da barra de compasso (barlineSeparation).
-  static const double barlineSpacing = 0.4;
+  // Valores oficiais do metadata Bravura engravingDefaults
+  static const double barlineSeparation = 0.4; // barlineSeparation oficial
+  static const double legerLineExtension = 0.4; // legerLineExtension oficial
 
   // --- As variáveis abaixo são regras de layout e não valores diretos do SMuFL ---
 
@@ -107,7 +107,7 @@ class LayoutEngine {
             system: currentSystem,
           ),
         );
-        currentX += barlineSpacing * staffSpace;
+        currentX += barlineSeparation * staffSpace;
       }
 
       // Adicionar espaçamento entre compassos
@@ -150,28 +150,49 @@ class LayoutEngine {
         element is TimeSignature;
   }
 
-  /// Calcula a largura de um elemento específico
+  /// Calcula a largura de um elemento específico usando valores oficiais Bravura
   double _getElementWidth(MusicalElement element) {
     if (element is Clef) {
-      return (clefWidth + 1.0) * staffSpace; // Clave + espaço extra
+      // Usar largura correta baseada no tipo de clave
+      double clefWidth;
+      switch (element.type) {
+        case 'g':
+          clefWidth = gClefWidth;
+          break;
+        case 'f':
+          clefWidth = fClefWidth;
+          break;
+        case 'c':
+          clefWidth = cClefWidth;
+          break;
+        default:
+          clefWidth = gClefWidth;
+      }
+      return (clefWidth + 0.5) * staffSpace; // Clave + espaço oficial
     } else if (element is KeySignature) {
       if (element.count == 0) {
         return 0.5 * staffSpace; // Pequeno espaço mesmo sem acidentes
       }
-      // Cada acidente ocupa ~0.8 staff spaces + espaço extra
-      return (element.count.abs() * 0.8 + 1.0) * staffSpace;
+      // Usar largura oficial dos acidentes + espaçamento oficial
+      final isSharp = element.count > 0;
+      final accidentalWidth = isSharp ? accidentalSharpWidth : accidentalFlatWidth;
+      final spacing = 0.8; // Espaçamento padrão entre acidentes
+      return (element.count.abs() * spacing + accidentalWidth + 0.5) * staffSpace;
     } else if (element is TimeSignature) {
       return 2.5 * staffSpace; // Fórmula de compasso + espaço
     } else if (element is Note) {
       double width = 0;
 
-      // Espaço para acidente se presente
+      // Espaço para acidente se presente (valor oficial)
       if (element.pitch.accidentalGlyph != null) {
-        width += accidentalWidth * staffSpace;
+        final accidentalWidth = element.pitch.accidentalGlyph!.contains('Sharp')
+            ? accidentalSharpWidth
+            : accidentalFlatWidth;
+        width += (accidentalWidth + 0.3) * staffSpace; // Acidente + espaçamento
       }
 
-      // Largura da cabeça da nota
-      width += noteheadWidth * staffSpace;
+      // Largura oficial da cabeça da nota
+      width += noteheadBlackWidth * staffSpace;
 
       // Espaçamento baseado na duração
       width += _getDurationSpacing(element.duration) * staffSpace;
@@ -181,14 +202,25 @@ class LayoutEngine {
       // Pausas precisam de espaço baseado na duração
       return (1.0 + _getDurationSpacing(element.duration)) * staffSpace;
     } else if (element is Chord) {
-      double width = noteheadWidth * staffSpace;
+      double width = noteheadBlackWidth * staffSpace;
 
-      // Verificar se alguma nota tem acidente
+      // Verificar se alguma nota tem acidente e usar largura correta
+      bool hasAccidental = false;
+      double maxAccidentalWidth = 0;
       for (final note in element.notes) {
         if (note.pitch.accidentalGlyph != null) {
-          width += accidentalWidth * staffSpace;
-          break; // Só precisa de espaço para um conjunto de acidentes
+          hasAccidental = true;
+          final accWidth = note.pitch.accidentalGlyph!.contains('Sharp')
+              ? accidentalSharpWidth
+              : accidentalFlatWidth;
+          if (accWidth > maxAccidentalWidth) {
+            maxAccidentalWidth = accWidth;
+          }
         }
+      }
+
+      if (hasAccidental) {
+        width += (maxAccidentalWidth + 0.3) * staffSpace;
       }
 
       width += _getDurationSpacing(element.duration) * staffSpace;

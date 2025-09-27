@@ -59,7 +59,8 @@ const Map<AccidentalType, String> accidentalToGlyph = {
   AccidentalType.quarterToneSharp: 'accidentalQuarterToneSharpStein',
   AccidentalType.quarterToneFlat: 'accidentalQuarterToneFlatStein',
   AccidentalType.threeQuarterToneSharp: 'accidentalThreeQuarterTonesSharpStein',
-  AccidentalType.threeQuarterToneFlat: 'accidentalThreeQuarterTonesFlatZimmermann',
+  AccidentalType.threeQuarterToneFlat:
+      'accidentalThreeQuarterTonesFlatZimmermann',
   AccidentalType.komaSharp: 'accidentalKomaSharp',
   AccidentalType.komaFlat: 'accidentalKomaFlat',
   AccidentalType.sagittal11MediumDiesisUp: 'accSagittal11MediumDiesisUp',
@@ -112,7 +113,15 @@ class Pitch {
   /// Calcula o número MIDI da nota (C4 = 60).
   /// Para microtons, retorna o valor mais próximo.
   int get midiNumber {
-    const stepToSemitone = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11};
+    const stepToSemitone = {
+      'C': 0,
+      'D': 2,
+      'E': 4,
+      'F': 5,
+      'G': 7,
+      'A': 9,
+      'B': 11,
+    };
     final semitone = stepToSemitone[step]!;
     return (octave + 1) * 12 + semitone + alter.round();
   }
@@ -186,13 +195,55 @@ class Pitch {
 /// Classe utilitária para operações com alturas
 class PitchUtils {
   /// Converte um número MIDI para Pitch
-  static Pitch fromMidiNumber(int midiNumber, {AccidentalType preferredAccidental = AccidentalType.sharp}) {
+  static Pitch fromMidiNumber(
+    int midiNumber, {
+    AccidentalType preferredAccidental = AccidentalType.sharp,
+  }) {
     final octave = (midiNumber ~/ 12) - 1;
     final semitone = midiNumber % 12;
 
-    const sharpNames = ['C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'];
-    const flatNames = ['C', 'D', 'D', 'E', 'E', 'F', 'G', 'G', 'A', 'A', 'B', 'B'];
-    const isSharp = [false, true, false, true, false, false, true, false, true, false, true, false];
+    const sharpNames = [
+      'C',
+      'C',
+      'D',
+      'D',
+      'E',
+      'F',
+      'F',
+      'G',
+      'G',
+      'A',
+      'A',
+      'B',
+    ];
+    const flatNames = [
+      'C',
+      'D',
+      'D',
+      'E',
+      'E',
+      'F',
+      'G',
+      'G',
+      'A',
+      'A',
+      'B',
+      'B',
+    ];
+    const isSharp = [
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+    ];
 
     if (!isSharp[semitone]) {
       return Pitch(step: sharpNames[semitone], octave: octave);
@@ -218,7 +269,7 @@ class PitchUtils {
   /// Calcula o intervalo em semitons entre duas alturas
   static double intervalInSemitones(Pitch pitch1, Pitch pitch2) {
     return (pitch2.midiNumber - pitch1.midiNumber).toDouble() +
-           (pitch2.alter - pitch1.alter);
+        (pitch2.alter - pitch1.alter);
   }
 
   /// Transpõe uma altura por um número de semitons

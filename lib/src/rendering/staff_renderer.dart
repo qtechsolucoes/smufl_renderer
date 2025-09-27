@@ -26,10 +26,10 @@ class StaffRenderer {
     required this.metadata,
     required this.theme,
   }) {
-    // Configuração correta dos tamanhos segundo SMuFL
+    // Configuração correta dos tamanhos segundo o metadata Bravura
     glyphSize = coordinates.staffSpace * 4.0; // Tamanho padrão para glifos
-    staffLineThickness = coordinates.staffSpace * 0.13; // 13% do staff space
-    stemThickness = coordinates.staffSpace * 0.12; // 12% do staff space
+    staffLineThickness = coordinates.staffSpace * 0.13; // Valor oficial Bravura
+    stemThickness = coordinates.staffSpace * 0.12; // Valor oficial Bravura
   }
 
   /// Renderiza a pauta completa com todos os elementos
@@ -86,23 +86,24 @@ class StaffRenderer {
   }
 
   void _renderClef(Canvas canvas, Clef clef, Offset basePosition) {
-    // Posicionamento correto da clave de sol
-    // A clave de sol deve ter seu centro na 2ª linha (G4)
+    String glyphName = _getClefGlyphName(clef.type);
     double yOffset = 0;
 
+    // Posicionamento simplificado e testado empiricamente
     if (clef.type == 'g') {
-      // Ajuste vertical para alinhar o círculo central com a 2ª linha
-      yOffset =
-          coordinates.staffSpace *
-          1.0; // G4 está 1 staff space acima da linha central
+      // Clave de sol: ajustar para que a espiral fique na 2ª linha
+      yOffset = coordinates.getStaffLineY(2) - coordinates.staffBaseline.dy + (coordinates.staffSpace * 0.1);
     } else if (clef.type == 'f') {
-      // Clave de fá - os dois pontos ficam ao redor da 4ª linha
-      yOffset = -coordinates.staffSpace * 1.0;
+      // Clave de fá: ajustar para que os pontos fiquem na 4ª linha
+      yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy + (coordinates.staffSpace * 0.2);
+    } else if (clef.type == 'c') {
+      // Clave de dó: centralizar na 3ª linha
+      yOffset = coordinates.getStaffLineY(3) - coordinates.staffBaseline.dy;
     }
 
     _drawGlyph(
       canvas: canvas,
-      glyphName: _getClefGlyphName(clef.type),
+      glyphName: glyphName,
       position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
       size: glyphSize,
       color: theme.clefColor,
@@ -169,7 +170,7 @@ class StaffRenderer {
     }
 
     double currentX = basePosition.dx;
-    final spacing = coordinates.staffSpace * 0.8;
+    final spacing = coordinates.staffSpace * 0.8; // Espaçamento simples e consistente
 
     for (int i = 0; i < count && i < positions.length; i++) {
       final y =
@@ -295,27 +296,35 @@ class StaffRenderer {
 
     final paint = Paint()
       ..color = theme.staffLineColor
-      ..strokeWidth = staffLineThickness;
+      ..strokeWidth = coordinates.staffSpace * 0.16;
 
-    final ledgerWidth = coordinates.staffSpace * 1.5;
-    final ledgerX1 = x - ledgerWidth * 0.5;
-    final ledgerX2 = x + ledgerWidth * 0.5;
+    // Extensão simples e funcional das linhas suplementares
+    final extension = coordinates.staffSpace * 0.4;
+    final noteWidth = coordinates.staffSpace * 1.18;
+    final totalWidth = noteWidth + (2 * extension);
+    final halfWidth = totalWidth * 0.5;
 
-    // Linhas suplementares superiores
+    // Linhas suplementares superiores (acima da pauta)
     if (staffPosition < -4) {
       for (int pos = -6; pos >= staffPosition; pos -= 2) {
-        final y =
-            coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
-        canvas.drawLine(Offset(ledgerX1, y), Offset(ledgerX2, y), paint);
+        final y = coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
+        canvas.drawLine(
+          Offset(x - halfWidth, y),
+          Offset(x + halfWidth, y),
+          paint,
+        );
       }
     }
 
-    // Linhas suplementares inferiores
+    // Linhas suplementares inferiores (abaixo da pauta)
     if (staffPosition > 4) {
       for (int pos = 6; pos <= staffPosition; pos += 2) {
-        final y =
-            coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
-        canvas.drawLine(Offset(ledgerX1, y), Offset(ledgerX2, y), paint);
+        final y = coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
+        canvas.drawLine(
+          Offset(x - halfWidth, y),
+          Offset(x + halfWidth, y),
+          paint,
+        );
       }
     }
   }
@@ -330,12 +339,11 @@ class StaffRenderer {
     final stemsUp = staffPosition > 0;
     final stemHeight = coordinates.staffSpace * 3.5;
 
-    // Calcular posição X da haste (baseado nas dimensões da Bravura)
-    final noteWidth =
-        coordinates.staffSpace * 1.18; // Largura oficial da noteheadBlack
+    // Posicionamento simples da haste
+    final noteWidth = coordinates.staffSpace * 1.18; // Largura padrão da cabeça
     final stemX = stemsUp
-        ? notePosition.dx + noteWidth * 1.150 - stemThickness * 1.150
-        : notePosition.dx - noteWidth * 0.00000025 + stemThickness * 0.00000025;
+        ? notePosition.dx + noteWidth - (stemThickness * 0.5) // Direita para hastes para cima
+        : notePosition.dx + (stemThickness * 0.5); // Esquerda para hastes para baixo
 
     // Calcular posições Y da haste
     final stemStartY = notePosition.dy;
@@ -373,7 +381,7 @@ class StaffRenderer {
     }
 
     // Ajuste de posição para bandeirolas
-    final flagOffset = stemsUp ? 0.0 : 0.0;
+    final flagOffset = stemsUp ? -25.0 : -25.0;
 
     _drawGlyph(
       canvas: canvas,
@@ -499,9 +507,27 @@ class StaffRenderer {
         ).compareTo(_calculateStaffPosition(a.pitch)),
       );
 
-    // Renderizar cada nota do acorde
-    for (final note in sortedNotes) {
-      _renderNote(canvas, note, basePosition);
+    // Renderizar cada nota do acorde com ajuste de posição horizontal
+    double xOffset = 0;
+    for (int i = 0; i < sortedNotes.length; i++) {
+      final note = sortedNotes[i];
+
+      // Aplicar offset para evitar sobreposição de notas
+      if (i > 0) {
+        // Verificar se as notas são adjacentes (intervalo de segunda)
+        final prevPosition = _calculateStaffPosition(sortedNotes[i-1].pitch);
+        final currPosition = _calculateStaffPosition(note.pitch);
+
+        if ((prevPosition - currPosition).abs() == 1) {
+          // Notas adjacentes: aplicar offset baseado no bounding box real
+          final noteheadBBox = metadata.getGlyphBoundingBox('noteheadBlack');
+          final noteWidth = noteheadBBox?.widthInPixels(coordinates.staffSpace) ??
+                           (coordinates.staffSpace * 1.18);
+          xOffset = (i % 2 == 1) ? noteWidth * 0.6 : 0; // 60% da largura para evitar sobreposição
+        }
+      }
+
+      _renderNote(canvas, note, Offset(basePosition.dx + xOffset, basePosition.dy));
     }
   }
 
@@ -523,7 +549,7 @@ class StaffRenderer {
           fontFamily: 'Bravura',
           fontSize: size,
           color: color,
-          height: 1.0, // Importante para manter proporções corretas
+          height: 1.0,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -531,7 +557,7 @@ class StaffRenderer {
 
     textPainter.layout();
 
-    // Calcular offset para centralização vertical se necessário
+    // Centralização simples e funcional
     double yOffset = 0;
     if (centerVertically) {
       yOffset = -textPainter.height * 0.5;

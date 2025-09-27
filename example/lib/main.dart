@@ -11,6 +11,9 @@ import 'examples/microtonal_example.dart';
 import 'examples/percussion_example.dart';
 import 'examples/contemporary_example.dart';
 import 'examples/jazz_example.dart';
+import 'examples/precision_test_example.dart';
+import 'examples/debug_visual_example.dart';
+import 'examples/simple_debug_example.dart';
 
 // 2. A função main agora é assíncrona para esperar o carregamento da fonte
 Future<void> main() async {
@@ -67,6 +70,9 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     const ContemporaryExample(),
     const JazzExample(),
     const PerformanceExample(),
+    const PrecisionTestExample(),
+    const DebugVisualExample(),
+    const SimpleDebugExample(),
   ];
 
   final List<String> _titles = [
@@ -78,6 +84,9 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     'Contemporâneo',
     'Jazz',
     'Performance',
+    'Teste de Precisão',
+    'Debug Visual',
+    'Debug Simples',
   ];
 
   @override
@@ -89,31 +98,68 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
         elevation: 4,
       ),
       body: _examples[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: Colors.blue[800],
-        unselectedItemColor: Colors.grey[600],
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.music_note),
-            label: 'Básico',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star),
-            label: 'Avançado',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome),
-            label: 'Complexo',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.speed),
-            label: 'Performance',
-          ),
-        ],
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.blue[800],
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'SMuFL Renderer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Exemplos e Testes',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...List.generate(_titles.length, (index) {
+              return ListTile(
+                leading: _getIconForIndex(index),
+                title: Text(_titles[index]),
+                selected: _selectedIndex == index,
+                selectedTileColor: Colors.blue[50],
+                onTap: () {
+                  setState(() => _selectedIndex = index);
+                  Navigator.pop(context);
+                },
+              );
+            }),
+          ],
+        ),
       ),
     );
+  }
+
+  Icon _getIconForIndex(int index) {
+    switch (index) {
+      case 0: return const Icon(Icons.music_note);
+      case 1: return const Icon(Icons.star);
+      case 2: return const Icon(Icons.auto_awesome);
+      case 3: return const Icon(Icons.tune);
+      case 4: return const Icon(Icons.sports_baseball);
+      case 5: return const Icon(Icons.art_track);
+      case 6: return const Icon(Icons.piano);
+      case 7: return const Icon(Icons.speed);
+      case 8: return const Icon(Icons.precision_manufacturing);
+      case 9: return const Icon(Icons.bug_report);
+      case 10: return const Icon(Icons.visibility);
+      default: return const Icon(Icons.circle);
+    }
   }
 }

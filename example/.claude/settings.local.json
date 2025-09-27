@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/smufl_renderer/lib/src/rendering/**)",
+      "Read(//c/smufl_renderer/lib/src/smufl/**)",
+      "Read(//c/smufl_renderer/lib/src/layout/**)",
+      "Bash(flutter analyze:*)",
+      "Read(//c/smufl_renderer/lib/src/music_model/**)",
+      "Read(//c/smufl_renderer/lib/**)",
+      "Bash(flutter build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
