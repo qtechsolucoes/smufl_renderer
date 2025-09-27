@@ -108,10 +108,10 @@ class _MusicScoreState extends State<MusicScore> {
     }
 
     // Altura = margem superior + (número de sistemas * altura do sistema) + margem inferior
-    final systemHeight = widget.staffSpace * 10; // Altura de cada sistema
-    final margins = widget.staffSpace * 4; // Margens superior e inferior
+    final systemHeight = widget.staffSpace * 5; // Altura de cada sistema
+    final margins = widget.staffSpace * 2; // Margens superior e inferior
 
-    return margins + ((maxSystem + 1) * systemHeight);
+    return margins + ((maxSystem + 2) * systemHeight);
   }
 }
 
@@ -144,7 +144,7 @@ class MusicScorePainter extends CustomPainter {
       final elements = entry.value;
 
       // Calcular posição base do sistema
-      final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 2);
+      final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 5);
       final staffBaseline = Offset(0, systemY);
 
       // Criar sistema de coordenadas para este sistema

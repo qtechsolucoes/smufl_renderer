@@ -47,7 +47,13 @@ class StaffCoordinateSystem {
 
     // Mapeamento diatônico das notas (posição na escala de 7 notas)
     final stepToDiatonic = {
-      'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6
+      'C': 0,
+      'D': 1,
+      'E': 2,
+      'F': 3,
+      'G': 4,
+      'A': 5,
+      'B': 6,
     };
 
     // B4 = linha central (baseline) = posição 0
@@ -59,7 +65,8 @@ class StaffCoordinateSystem {
     final noteDiatonicPos = stepToDiatonic[step.toUpperCase()] ?? 0;
 
     // Calcular distância em "passos" diatônicos
-    final diatonicSteps = (noteDiatonicPos - refDiatonicPos) + ((octave - refOctave) * 7);
+    final diatonicSteps =
+        (noteDiatonicPos - refDiatonicPos) + ((octave - refOctave) * 7);
 
     // Cada passo diatônico = 0.5 * staffSpace
     final noteY = staffBaseline.dy - (diatonicSteps * staffSpace * 0.5);
@@ -100,11 +107,11 @@ class StaffCoordinateSystem {
   /// Calcula posição para fórmula de compasso
   /// Numerador acima da linha central, denominador abaixo
   Offset getTimeSignatureNumeratorPosition(Offset basePosition) {
-    return Offset(basePosition.dx, staffBaseline.dy - (staffSpace * 1.0));
+    return Offset(basePosition.dx, staffBaseline.dy - (staffSpace * 0.5));
   }
 
   Offset getTimeSignatureDenominatorPosition(Offset basePosition) {
-    return Offset(basePosition.dx, staffBaseline.dy + (staffSpace * 1.0));
+    return Offset(basePosition.dx, staffBaseline.dy + (staffSpace * 0.5));
   }
 
   /// Posição padrão para clave de sol

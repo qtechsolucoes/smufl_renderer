@@ -202,7 +202,7 @@ class StaffRenderer {
       canvas: canvas,
       glyphName: numeratorGlyph,
       position: Offset(basePosition.dx, coordinates.getStaffLineY(2)),
-      size: glyphSize * 1.5,
+      size: glyphSize,
       color: theme.timeSignatureColor,
       centerVertically: true,
     );
@@ -212,7 +212,7 @@ class StaffRenderer {
       canvas: canvas,
       glyphName: denominatorGlyph,
       position: Offset(basePosition.dx, coordinates.getStaffLineY(4)),
-      size: glyphSize * 1.5,
+      size: glyphSize,
       color: theme.timeSignatureColor,
       centerVertically: true,
     );
@@ -334,8 +334,8 @@ class StaffRenderer {
     final noteWidth =
         coordinates.staffSpace * 1.18; // Largura oficial da noteheadBlack
     final stemX = stemsUp
-        ? notePosition.dx + noteWidth * 0.5 - stemThickness * 0.5
-        : notePosition.dx - noteWidth * 0.5 + stemThickness * 0.5;
+        ? notePosition.dx + noteWidth * 1.150 - stemThickness * 1.150
+        : notePosition.dx - noteWidth * 0.00000025 + stemThickness * 0.00000025;
 
     // Calcular posições Y da haste
     final stemStartY = notePosition.dy;

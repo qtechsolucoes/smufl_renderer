@@ -364,7 +364,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     // CORREÇÃO: Usar StaffCoordinateSystem para calcular Y correto
     final system = _getSystemFromPosition(position);
     final systemY = 50.0 + (system * staffSpace * 8);
-    final staffBaseline = Offset(0, systemY + (2 * staffSpace)); // 3ª linha da pauta
+    final staffBaseline = Offset(
+      0,
+      systemY + (2 * staffSpace),
+    ); // 3ª linha da pauta
 
     final coordSystem = StaffCoordinateSystem(
       staffSpace: staffSpace,
@@ -376,7 +379,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
     // Regra profissional: hastes para cima se a nota estiver na metade inferior do pentagrama
     final staffPosition = _calculateStaffPosition(note.pitch, clef);
-    bool stemsGoUp = staffPosition >
+    bool stemsGoUp =
+        staffPosition >
         0; // Corrigido: > 0 para hastes para cima quando abaixo da linha central
 
     // Desenha a cabeça da nota
@@ -581,8 +585,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
       x: position.dx,
       y:
           position.dy -
-          (0.75 * staffSpace), // Numerador ligeiramente acima do centro
-      fontSize: staffSpace * 2.5, // Tamanho apropriado para fórmula de compasso
+          (1.0 * staffSpace), // Numerador ligeiramente acima do centro
+      fontSize: staffSpace * 0.1, // Tamanho apropriado para fórmula de compasso
     );
     _drawGlyph(
       canvas: canvas,
@@ -591,8 +595,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
       x: position.dx,
       y:
           position.dy +
-          (0.75 * staffSpace), // Denominador ligeiramente abaixo do centro
-      fontSize: staffSpace * 2.5, // Tamanho apropriado para fórmula de compasso
+          (1.0 * staffSpace), // Denominador ligeiramente abaixo do centro
+      fontSize: staffSpace * 0.1, // Tamanho apropriado para fórmula de compasso
     );
   }
 

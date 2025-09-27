@@ -20,16 +20,26 @@ class LayoutEngine {
   final double staffSpace;
 
   // Espaçamentos baseados em SMuFL/Bravura (em staff spaces)
-  static const double clefWidth =
-      3.2; // um pouco maior para não colar no sustenido
-  static const double noteheadWidth = 1.25; // levemente maior, dá mais respiro
-  static const double accidentalWidth =
-      1.2; // garante que acidentes não fiquem esmagados
-  static const double minNoteSpacing = 2.0; // mais espaçamento entre notas
-  static const double barlineSpacing =
-      0.8; // mais espaço antes da barra de compasso
-  static const double measurePadding =
-      1.5; // espaço extra no início e fim do compasso
+
+  // A largura da clave de Sol padrão (gClef).
+  static const double clefWidth = 2.684;
+
+  // A largura da cabeça de nota preta padrão (noteheadBlack).
+  static const double noteheadWidth = 1.18;
+
+  // Usando a largura do sustenido (accidentalSharp), que é o acidente comum mais largo.
+  static const double accidentalWidth = 0.996;
+
+  // O espaço padrão de separação da barra de compasso (barlineSeparation).
+  static const double barlineSpacing = 0.4;
+
+  // --- As variáveis abaixo são regras de layout e não valores diretos do SMuFL ---
+
+  // Um valor estilístico para o respiro mínimo entre as notas. 2.0 é uma boa escolha.
+  static const double minNoteSpacing = 2.0;
+
+  // Um valor estilístico para o preenchimento do compasso. 1.5 é uma boa escolha.
+  static const double measurePadding = 1.5;
 
   LayoutEngine(
     this.staff, {
@@ -256,9 +266,9 @@ class LayoutEngine {
         while (queue.isNotEmpty) {
           final next = queue.first;
           if (next is Note && _isBeamable(next) && next.beam == null) {
-            // CORREÇÃO AQUI:
-            // Adicionamos 'next' (que já foi promovido para o tipo Note)
-            // e depois removemos da fila.
+            // *** CORREÇÃO DO ERRO DE TIPO APLICADA AQUI ***
+            // Adiciona 'next' (que já foi promovido para o tipo Note)
+            // e somente depois remove da fila.
             beamGroup.add(next);
             queue.removeFirst();
           } else {
