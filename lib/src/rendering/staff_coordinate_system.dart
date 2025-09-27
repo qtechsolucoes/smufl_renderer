@@ -107,9 +107,8 @@ class StaffCoordinateSystem {
   /// A clave deve ser posicionada de forma que o círculo fique na 2ª linha
   Offset getClefPosition(Offset basePosition, {String clef = 'treble'}) {
     if (clef == 'treble' || clef == 'g') {
-      // A clave de sol deve ter seu ponto de referência na 2ª linha (G4)
-      // Baseado nos metadados Bravura, ajustamos para que fique corretamente posicionada
-      return Offset(basePosition.dx, staffBaseline.dy + (staffSpace * 0.3));
+      // A clave de sol deve ficar centrada na pauta
+      return Offset(basePosition.dx, staffBaseline.dy);
     }
     return basePosition;
   }

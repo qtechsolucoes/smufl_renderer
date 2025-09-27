@@ -30,7 +30,7 @@ class NewMusicPainter extends CustomPainter {
     // Calcular posição da baseline da pauta
     final staffMargin = staffSpace * 2;
     final staffBaseline = Offset(
-      0,
+      staffMargin,
       staffMargin + (staffSpace * 2),
     ); // 3ª linha da pauta
 
@@ -47,9 +47,8 @@ class NewMusicPainter extends CustomPainter {
       final elements = entry.value;
 
       final systemBaseline = Offset(
-        0,
-        staffBaseline.dy +
-            (systemIndex * staffSpace * 10), // Espaçamento entre sistemas
+        staffMargin,
+        staffBaseline.dy + (systemIndex * staffSpace * 10), // Espaçamento entre sistemas
       );
 
       final systemCoordinates = StaffCoordinateSystem(

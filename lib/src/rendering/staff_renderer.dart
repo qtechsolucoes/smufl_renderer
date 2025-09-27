@@ -142,7 +142,7 @@ class StaffRenderer {
       color: theme.noteheadColor,
     );
 
-    // Desenhar haste se necessário
+    // Desenhar haste SEMPRE (exceto para nota breve/whole)
     if (note.duration.type != DurationType.whole) {
       _renderStem(canvas, note, notePosition);
     }
