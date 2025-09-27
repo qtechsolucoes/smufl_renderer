@@ -41,38 +41,26 @@ class StaffCoordinateSystem {
   }
 
   double _getTrebleClefNoteY(String step, int octave) {
-    // Clave de sol padrão: G4 fica na 2ª linha (linha inferior = 1)
-    // staffBaseline representa a 3ª linha (linha central)
+    // SISTEMA SIMPLES E CORRETO:
+    // staffBaseline = 3ª linha da pauta (linha central)
+    // Cada linha/espaço = 0.5 * staffSpace
 
-    // Posições das linhas:
-    // Linha 1 (inferior): staffBaseline.dy + staffSpace
-    // Linha 2: staffBaseline.dy
-    // Linha 3 (central): staffBaseline.dy - staffSpace
-    // Linha 4: staffBaseline.dy - (staffSpace * 2)
-    // Linha 5 (superior): staffBaseline.dy - (staffSpace * 3)
-
-    final Map<String, double> notePositions = {
-      // Octave 4 - referência principal
-      'C4': staffBaseline.dy + (staffSpace * 2.0), // Linha suplementar abaixo
-      'D4': staffBaseline.dy + (staffSpace * 1.5), // Espaço abaixo da pauta
-      'E4': staffBaseline.dy + (staffSpace * 1.0), // 1ª linha (inferior)
-      'F4': staffBaseline.dy + (staffSpace * 0.5), // 1º espaço
-      'G4': staffBaseline.dy + (staffSpace * 0.0), // 2ª linha
-      'A4': staffBaseline.dy - (staffSpace * 0.5), // 2º espaço
-      'B4': staffBaseline.dy - (staffSpace * 1.0), // 3ª linha (central/baseline)
-
-      // Octave 5
-      'C5': staffBaseline.dy - (staffSpace * 1.5), // 3º espaço
-      'D5': staffBaseline.dy - (staffSpace * 2.0), // 4ª linha
-      'E5': staffBaseline.dy - (staffSpace * 2.5), // 4º espaço
-      'F5': staffBaseline.dy - (staffSpace * 3.0), // 5ª linha (superior)
-      'G5': staffBaseline.dy - (staffSpace * 3.5), // Espaço acima da pauta
-      'A5': staffBaseline.dy - (staffSpace * 4.0), // Linha suplementar acima
-      'B5': staffBaseline.dy - (staffSpace * 4.5),
+    // Mapeamento direto das notas em semitons
+    final noteToSemitone = {
+      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
     };
 
-    final key = '$step$octave';
-    return notePositions[key] ?? staffBaseline.dy;
+    // C4 = Dó central = 2 staff spaces abaixo da baseline (linha suplementar)
+    final c4Position = staffBaseline.dy + (staffSpace * 2.0);
+
+    // Calcular posição da nota atual
+    final noteSemitone = noteToSemitone[step.toUpperCase()] ?? 0;
+    final totalSemitones = (octave - 4) * 12 + noteSemitone;
+
+    // Cada semitom = 0.5 * staffSpace na clave de sol
+    final noteY = c4Position - (totalSemitones * staffSpace * 0.5);
+
+    return noteY;
   }
 
   /// Retorna posições para acidentes na armadura de clave
@@ -106,13 +94,13 @@ class StaffCoordinateSystem {
   }
 
   /// Calcula posição para fórmula de compasso
-  /// Numerador na 4ª linha, denominador na 2ª linha
+  /// Numerador acima da linha central, denominador abaixo
   Offset getTimeSignatureNumeratorPosition(Offset basePosition) {
-    return Offset(basePosition.dx, getStaffLineY(4));
+    return Offset(basePosition.dx, staffBaseline.dy - (staffSpace * 1.0));
   }
 
   Offset getTimeSignatureDenominatorPosition(Offset basePosition) {
-    return Offset(basePosition.dx, getStaffLineY(2));
+    return Offset(basePosition.dx, staffBaseline.dy + (staffSpace * 1.0));
   }
 
   /// Posição padrão para clave de sol
