@@ -9,6 +9,8 @@ import 'src/theme/music_score_theme.dart';
 export 'src/music_model/musical_element.dart';
 export 'src/theme/music_score_theme.dart';
 export 'src/layout/layout_engine.dart'; // Exporta a classe PositionedElement
+export 'src/parsers/json_parser.dart'; // Exporta o parser JSON
+export 'src/smufl/glyph_categories.dart'; // Exporta categorias de glifos
 
 class MusicScore extends StatefulWidget {
   final Staff staff;

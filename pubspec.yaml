@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  xml: ^6.5.0
 
 dev_dependencies:
   flutter_test:
@@ -23,11 +24,11 @@ dev_dependencies:
 flutter:
   # Para que a aplicação que usar seu pacote possa acessar os assets
   assets:
-    - packages/smufl_renderer/assets/smufl/bravura_metadata.json
-    - packages/smufl_renderer/assets/smufl/glyphnames.json
+    - assets/smufl/bravura_metadata.json # CORRIGIDO
+    - assets/smufl/glyphnames.json      # CORRIGIDO
 
   # Para declarar a fonte
   fonts:
     - family: Bravura
       fonts:
-        - asset: packages/smufl_renderer/assets/smufl/Bravura.otf
+        - asset: assets/smufl/Bravura.otf # CORRIGIDO
