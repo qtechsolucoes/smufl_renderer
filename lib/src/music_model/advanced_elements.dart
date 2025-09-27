@@ -2,6 +2,32 @@
 
 import 'musical_element.dart';
 
+// === TÉCNICAS DE EXECUÇÃO (ELEMENTO QUE FALTAVA) ===
+
+/// Tipos de técnicas de execução.
+enum TechniqueType {
+  pizzicato,
+  snapPizzicato,
+  colLegno,
+  bowOnBridge,
+  bowOnTailpiece,
+  sulTasto,
+  sulPonticello,
+  martellato,
+  ricochet,
+  jet,
+  vibrato,
+  naturalHarmonic,
+  artificialHarmonic,
+}
+
+/// Representa uma técnica de execução específica.
+class PlayingTechnique extends MusicalElement {
+  final TechniqueType type;
+
+  PlayingTechnique({required this.type});
+}
+
 // === ORNAMENTOS AVANÇADOS ===
 
 /// Tipos de ornamentos disponíveis
@@ -11,9 +37,11 @@ enum OrnamentType {
   trillNatural,
   trillSharp,
   mordent,
+  invertedMordent, // CORRIGIDO: Adicionado
   shortTrill,
   turn,
   turnInverted,
+  invertedTurn, // CORRIGIDO: Adicionado
   turnSlash,
   appoggiaturaUp,
   appoggiaturaDown,
@@ -30,6 +58,15 @@ enum OrnamentType {
   wavyLine,
   zigzagLine,
   fermata,
+  fermataBelow, // CORRIGIDO: Adicionado
+  fermataBelowInverted, // CORRIGIDO: Adicionado
+  schleifer, // CORRIGIDO: Adicionado
+  mordentUpperPrefix, // CORRIGIDO: Adicionado
+  mordentLowerPrefix, // CORRIGIDO: Adicionado
+  trillLigature, // CORRIGIDO: Adicionado
+  haydn, // CORRIGIDO: Adicionado
+  zigZagLineNoRightEnd, // CORRIGIDO: Adicionado
+  zigZagLineWithRightEnd, // CORRIGIDO: Adicionado
   arpeggio,
   grace,
 }
@@ -37,9 +74,9 @@ enum OrnamentType {
 /// Representa um ornamento musical
 class Ornament extends MusicalElement {
   final OrnamentType type;
-  final bool above; // Se o ornamento fica acima ou abaixo da nota
-  final String? text; // Texto adicional se necessário
-  final Pitch? alternatePitch; // Para ornamentos que especificam altura
+  final bool above;
+  final String? text;
+  final Pitch? alternatePitch;
 
   Ornament({
     required this.type,
@@ -53,41 +90,46 @@ class Ornament extends MusicalElement {
 
 /// Tipos de dinâmicas disponíveis
 enum DynamicType {
-  // Dinâmicas básicas
-  pianississimo, // ppp
-  pianissimo, // pp
-  piano, // p
-  mezzoPiano, // mp
-  mezzoForte, // mf
-  forte, // f
-  fortissimo, // ff
-  fortississimo, // fff
-
-  // Dinâmicas extremas
-  pppp, ppppp, pppppp,
-  ffff, fffff, ffffff,
-
-  // Acentos
+  pianississimo,
+  pianissimo,
+  piano,
+  mezzoPiano,
+  mezzoForte,
+  forte,
+  fortissimo,
+  fortississimo,
+  pppp,
+  ppppp,
+  pppppp,
+  ffff,
+  fffff,
+  ffffff,
   sforzando,
   sforzandoFF,
   sforzandoPiano,
+  sforzandoPianissimo, // CORRIGIDO: Adicionado
   rinforzando,
-  fortepiano,
-
-  // Crescendos e diminuendos
+  fortePiano, // CORRIGIDO: "fortepiano" para "fortePiano"
   crescendo,
   diminuendo,
-
-  // Personalizadas
+  niente, // CORRIGIDO: Adicionado
+  ppp, // CORRIGIDO: Adicionado
+  pp, // CORRIGIDO: Adicionado
+  p, // CORRIGIDO: Adicionado
+  mp, // CORRIGIDO: Adicionado
+  mf, // CORRIGIDO: Adicionado
+  f, // CORRIGIDO: Adicionado
+  ff, // CORRIGIDO: Adicionado
+  fff, // CORRIGIDO: Adicionado
   custom,
 }
 
 /// Representa uma indicação dinâmica
 class Dynamic extends MusicalElement {
   final DynamicType type;
-  final String? customText; // Para dinâmicas personalizadas
-  final bool isHairpin; // Se é um crescendo/diminuendo
-  final double? length; // Comprimento para hairpins
+  final String? customText;
+  final bool isHairpin;
+  final double? length;
 
   Dynamic({
     required this.type,
@@ -99,7 +141,6 @@ class Dynamic extends MusicalElement {
 
 // === ACORDES ===
 
-/// Representa um acorde (múltiplas notas simultâneas)
 class Chord extends MusicalElement {
   final List<Note> notes;
   final Duration duration;
@@ -121,22 +162,21 @@ class Chord extends MusicalElement {
     this.dynamic,
   });
 
-  /// Retorna a nota mais aguda do acorde
   Note get highestNote {
-    return notes.reduce((a, b) =>
-      a.pitch.midiNumber > b.pitch.midiNumber ? a : b);
+    return notes.reduce(
+      (a, b) => a.pitch.midiNumber > b.pitch.midiNumber ? a : b,
+    );
   }
 
-  /// Retorna a nota mais grave do acorde
   Note get lowestNote {
-    return notes.reduce((a, b) =>
-      a.pitch.midiNumber < b.pitch.midiNumber ? a : b);
+    return notes.reduce(
+      (a, b) => a.pitch.midiNumber < b.pitch.midiNumber ? a : b,
+    );
   }
 }
 
 // === QUIÁLTERAS ===
 
-/// Representa uma proporção de quiáltera
 class TupletRatio {
   final int actualNotes;
   final int normalNotes;
@@ -144,16 +184,15 @@ class TupletRatio {
   const TupletRatio(this.actualNotes, this.normalNotes);
 }
 
-/// Representa uma quiáltera (tuplet)
 class Tuplet extends MusicalElement {
-  final int actualNotes; // Quantidade real de notas
-  final int normalNotes; // Quantidade normal no tempo
-  final List<MusicalElement> elements; // Notas ou outros elementos
-  final List<Note> notes; // Lista específica de notas para compatibilidade
-  final bool showBracket; // Se mostra colchete
-  final bool showNumber; // Se mostra número
-  final TupletRatio ratio; // Proporção da quiáltera
-  final bool bracket; // Alias para showBracket
+  final int actualNotes;
+  final int normalNotes;
+  final List<MusicalElement> elements;
+  final List<Note> notes;
+  final bool showBracket;
+  final bool showNumber;
+  final TupletRatio ratio;
+  final bool bracket;
 
   Tuplet({
     required this.actualNotes,
@@ -171,15 +210,13 @@ class Tuplet extends MusicalElement {
 
 // === LIGADURAS AVANÇADAS ===
 
-/// Tipos de ligaduras
 enum SlurDirection { up, down, auto }
 
-/// Ligadura avançada com mais controle
 class AdvancedSlur extends MusicalElement {
   final SlurType type;
   final SlurDirection direction;
-  final int? voiceNumber; // Para múltiplas vozes
-  final String? id; // Identificador único para ligaduras complexas
+  final int? voiceNumber;
+  final String? id;
 
   AdvancedSlur({
     required this.type,
@@ -191,22 +228,16 @@ class AdvancedSlur extends MusicalElement {
 
 // === MÚLTIPLAS VOZES ===
 
-/// Representa uma voz musical independente
 class Voice {
   final int number;
   final List<MusicalElement> elements;
   final String? name;
 
-  Voice({
-    required this.number,
-    this.elements = const [],
-    this.name,
-  });
+  Voice({required this.number, this.elements = const [], this.name});
 
   void add(MusicalElement element) => elements.add(element);
 }
 
-/// Compasso com múltiplas vozes
 class MultiVoiceMeasure extends Measure {
   final Map<int, Voice> voices = {};
 
@@ -221,7 +252,6 @@ class MultiVoiceMeasure extends Measure {
 
 // === REPETIÇÕES AVANÇADAS ===
 
-/// Tipos de repetição
 enum RepeatType {
   start,
   end,
@@ -235,22 +265,16 @@ enum RepeatType {
   toCoda,
 }
 
-/// Marcas de repetição
 class RepeatMark extends MusicalElement {
   final RepeatType type;
-  final String? label; // Para repetições numeradas (1., 2., etc.)
-  final int? times; // Quantas vezes repetir
+  final String? label;
+  final int? times;
 
-  RepeatMark({
-    required this.type,
-    this.label,
-    this.times,
-  });
+  RepeatMark({required this.type, this.label, this.times});
 }
 
 // === TEXTOS E EXPRESSÕES ===
 
-/// Tipos de texto musical
 enum TextType {
   lyrics,
   chord,
@@ -266,10 +290,8 @@ enum TextType {
   dynamics,
 }
 
-/// Posicionamento do texto
 enum TextPlacement { above, below, inside }
 
-/// Texto musical
 class MusicText extends MusicalElement {
   final String text;
   final TextType type;
@@ -292,7 +314,6 @@ class MusicText extends MusicalElement {
 
 // === TÉCNICAS ESPECIAIS ===
 
-/// Técnicas especiais para notas
 enum NoteTechnique {
   harmonic,
   glissando,
@@ -312,12 +333,11 @@ enum NoteTechnique {
 
 // === INDICAÇÕES DE TEMPO ===
 
-/// Indicação de tempo (metrônomo)
 class TempoMark extends MusicalElement {
-  final DurationType beatUnit; // Unidade de tempo
-  final int? bpm; // Batidas por minuto
-  final String? text; // Texto descritivo (Allegro, Andante, etc.)
-  final bool showMetronome; // Se mostra o símbolo de metrônomo
+  final DurationType beatUnit;
+  final int? bpm;
+  final String? text;
+  final bool showMetronome;
 
   TempoMark({
     required this.beatUnit,
@@ -329,7 +349,6 @@ class TempoMark extends MusicalElement {
 
 // === BARRAS DE COMPASSO AVANÇADAS ===
 
-/// Tipos de barra de compasso
 enum BarlineType {
   single,
   double,
@@ -346,42 +365,26 @@ enum BarlineType {
   tick,
 }
 
-/// Barra de compasso avançada
 class AdvancedBarline extends MusicalElement {
   final BarlineType type;
   final RepeatMark? repeatMark;
   final String? rehearsalLetter;
 
-  AdvancedBarline({
-    required this.type,
-    this.repeatMark,
-    this.rehearsalLetter,
-  });
+  AdvancedBarline({required this.type, this.repeatMark, this.rehearsalLetter});
 }
 
 // === LINHAS DE PROLONGAMENTO ===
 
-/// Tipos de linha
-enum LineType {
-  solid,
-  dashed,
-  dotted,
-  wavy,
-  zigzag,
-  trill,
-  glissando,
-  octave,
-}
+enum LineType { solid, dashed, dotted, wavy, zigzag, trill, glissando, octave }
 
-/// Linha de prolongamento ou conexão
 class Line extends MusicalElement {
   final LineType type;
   final double startX;
   final double startY;
   final double endX;
   final double endY;
-  final String? text; // Texto que acompanha a linha
-  final bool showArrow; // Se mostra seta no final
+  final String? text;
+  final bool showArrow;
 
   Line({
     required this.type,
@@ -396,17 +399,8 @@ class Line extends MusicalElement {
 
 // === RESPIRAÇÕES E CESURAS ===
 
-/// Tipos de respiração
-enum BreathType {
-  comma,
-  tick,
-  upbow,
-  caesura,
-  shortCaesura,
-  longCaesura,
-}
+enum BreathType { comma, tick, upbow, caesura, shortCaesura, longCaesura }
 
-/// Marca de respiração ou cesura
 class Breath extends MusicalElement {
   final BreathType type;
 
@@ -415,21 +409,11 @@ class Breath extends MusicalElement {
 
 // === HARMÔNICOS ===
 
-/// Tipos de harmônico
-enum HarmonicType {
-  natural,
-  artificial,
-  touched,
-  sounding,
-}
+enum HarmonicType { natural, artificial, touched, sounding }
 
-/// Harmônico
 class Harmonic extends MusicalElement {
   final HarmonicType type;
-  final Pitch? soundingPitch; // Altura resultante
+  final Pitch? soundingPitch;
 
-  Harmonic({
-    required this.type,
-    this.soundingPitch,
-  });
+  Harmonic({required this.type, this.soundingPitch});
 }
