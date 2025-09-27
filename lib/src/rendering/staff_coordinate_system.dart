@@ -41,24 +41,28 @@ class StaffCoordinateSystem {
   }
 
   double _getTrebleClefNoteY(String step, int octave) {
-    // SISTEMA SIMPLES E CORRETO:
-    // staffBaseline = 3ª linha da pauta (linha central)
+    // CORREÇÃO: Sistema diatônico (não cromático)
+    // staffBaseline = 3ª linha da pauta (B4 na clave de Sol)
     // Cada linha/espaço = 0.5 * staffSpace
 
-    // Mapeamento direto das notas em semitons
-    final noteToSemitone = {
-      'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
+    // Mapeamento diatônico das notas (posição na escala de 7 notas)
+    final stepToDiatonic = {
+      'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6
     };
 
-    // C4 = Dó central = 2 staff spaces abaixo da baseline (linha suplementar)
-    final c4Position = staffBaseline.dy + (staffSpace * 2.0);
+    // B4 = linha central (baseline) = posição 0
+    const refStep = 'B';
+    const refOctave = 4;
+    final refDiatonicPos = stepToDiatonic[refStep]!;
 
-    // Calcular posição da nota atual
-    final noteSemitone = noteToSemitone[step.toUpperCase()] ?? 0;
-    final totalSemitones = (octave - 4) * 12 + noteSemitone;
+    // Posição diatônica da nota atual
+    final noteDiatonicPos = stepToDiatonic[step.toUpperCase()] ?? 0;
 
-    // Cada semitom = 0.5 * staffSpace na clave de sol
-    final noteY = c4Position - (totalSemitones * staffSpace * 0.5);
+    // Calcular distância em "passos" diatônicos
+    final diatonicSteps = (noteDiatonicPos - refDiatonicPos) + ((octave - refOctave) * 7);
+
+    // Cada passo diatônico = 0.5 * staffSpace
+    final noteY = staffBaseline.dy - (diatonicSteps * staffSpace * 0.5);
 
     return noteY;
   }

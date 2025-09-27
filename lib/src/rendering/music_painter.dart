@@ -8,6 +8,7 @@ import '../smufl/smufl_metadata_loader.dart';
 import '../theme/music_score_theme.dart';
 import 'advanced_painter.dart';
 import 'performance_optimizer.dart';
+import 'staff_coordinate_system.dart';
 
 class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
   final List<PositionedElement> positionedElements;
@@ -360,13 +361,22 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     Offset position,
     double staffSpace,
   ) {
-    final staffPosition = _calculateStaffPosition(note.pitch, clef);
-    final noteY = position.dy - (staffPosition * staffSpace / 2);
+    // CORREÇÃO: Usar StaffCoordinateSystem para calcular Y correto
+    final system = _getSystemFromPosition(position);
+    final systemY = 50.0 + (system * staffSpace * 8);
+    final staffBaseline = Offset(0, systemY + (2 * staffSpace)); // 3ª linha da pauta
+
+    final coordSystem = StaffCoordinateSystem(
+      staffSpace: staffSpace,
+      staffBaseline: staffBaseline,
+    );
+
+    final noteY = coordSystem.getNoteY(note.pitch.step, note.pitch.octave);
     final glyphName = note.duration.type.glyphName;
 
     // Regra profissional: hastes para cima se a nota estiver na metade inferior do pentagrama
-    bool stemsGoUp =
-        staffPosition >
+    final staffPosition = _calculateStaffPosition(note.pitch, clef);
+    bool stemsGoUp = staffPosition >
         0; // Corrigido: > 0 para hastes para cima quando abaixo da linha central
 
     // Desenha a cabeça da nota
@@ -851,6 +861,12 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     if (positions.isNotEmpty) {
       drawTuplet(canvas, tuplet, positions, staffSpace, theme);
     }
+  }
+
+  // Método auxiliar para obter o sistema (linha de pauta) de uma posição
+  int _getSystemFromPosition(Offset position) {
+    // Cada sistema tem altura de staffSpace * 8
+    return ((position.dy - 50.0) / (staffSpace * 8)).floor();
   }
 
   @override

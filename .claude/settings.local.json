@@ -5,7 +5,8 @@
       "Bash(flutter:*)",
       "Read(//c/Users/aless/OneDrive/Área de Trabalho/**)",
       "Bash(nc:*)",
-      "WebFetch(domain:w3c.github.io)"
+      "WebFetch(domain:w3c.github.io)",
+      "Read(//c/Users/aless/Downloads/**)"
     ],
     "deny": [],
     "ask": []
