@@ -750,7 +750,8 @@ class MusicXMLParser {
       final root = document.rootElement;
 
       // Verifica se é score-partwise ou score-timewise
-      if (root.name.local != 'score-partwise' && root.name.local != 'score-timewise') {
+      if (root.name.local != 'score-partwise' &&
+          root.name.local != 'score-timewise') {
         return false;
       }
 
@@ -776,38 +777,47 @@ class MusicXMLParser {
       final root = document.rootElement;
 
       // Título da obra
-      final workTitle = root.findElements('work')
+      final workTitle = root
+          .findElements('work')
           .expand((e) => e.findElements('work-title'))
-          .firstOrNull?.innerText;
+          .firstOrNull
+          ?.innerText;
       if (workTitle != null) metadata['title'] = workTitle;
 
       // Compositor
-      final composer = root.findElements('identification')
+      final composer = root
+          .findElements('identification')
           .expand((e) => e.findElements('creator'))
           .where((e) => e.getAttribute('type') == 'composer')
-          .firstOrNull?.innerText;
+          .firstOrNull
+          ?.innerText;
       if (composer != null) metadata['composer'] = composer;
 
       // Software
-      final software = root.findElements('identification')
+      final software = root
+          .findElements('identification')
           .expand((e) => e.findElements('creator'))
           .where((e) => e.getAttribute('type') == 'software')
-          .firstOrNull?.innerText;
+          .firstOrNull
+          ?.innerText;
       if (software != null) metadata['software'] = software;
 
       // Número de partes
-      final partCount = root.findElements('part-list')
+      final partCount = root
+          .findElements('part-list')
           .expand((e) => e.findElements('score-part'))
           .length;
       metadata['partCount'] = partCount;
 
       // Número de compassos (primeira parte)
-      final measureCount = root.findElements('part')
-          .firstOrNull
-          ?.findElements('measure')
-          .length ?? 0;
+      final measureCount =
+          root
+              .findElements('part')
+              .firstOrNull
+              ?.findElements('measure')
+              .length ??
+          0;
       metadata['measureCount'] = measureCount;
-
     } catch (e) {
       metadata['error'] = 'Erro ao extrair metadados: $e';
     }
@@ -818,7 +828,7 @@ class MusicXMLParser {
   // Método para converter entre formatos MusicXML
   static String convertPartwiseToTimewise(String partwiseXml) {
     final staff = parseMusicXML(partwiseXml);
-    return toMusicXML(staff); // Por enquanto retorna partwise
+    return staffToMusicXML(staff); // Por enquanto retorna partwise
   }
 
   // Método para otimizar XML para tamanho
@@ -838,31 +848,43 @@ class MusicXMLParser {
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="UTF-8"');
 
-    builder.element('score-partwise', nest: () {
-      builder.attribute('version', '3.1');
+    builder.element(
+      'score-partwise',
+      nest: () {
+        builder.attribute('version', '3.1');
 
-      // Lista de partes
-      builder.element('part-list', nest: () {
+        // Lista de partes
+        builder.element(
+          'part-list',
+          nest: () {
+            for (int i = 0; i < staffs.length; i++) {
+              builder.element(
+                'score-part',
+                nest: () {
+                  builder.attribute('id', 'P${i + 1}');
+                  builder.element('part-name', nest: 'Part ${i + 1}');
+                },
+              );
+            }
+          },
+        );
+
+        // Partes musicais
         for (int i = 0; i < staffs.length; i++) {
-          builder.element('score-part', nest: () {
-            builder.attribute('id', 'P${i + 1}');
-            builder.element('part-name', nest: 'Part ${i + 1}');
-          });
+          final staff = staffs[i];
+          builder.element(
+            'part',
+            nest: () {
+              builder.attribute('id', 'P${i + 1}');
+
+              for (int j = 0; j < staff.measures.length; j++) {
+                _buildMeasureXML(builder, staff.measures[j], j + 1);
+              }
+            },
+          );
         }
-      });
-
-      // Partes musicais
-      for (int i = 0; i < staffs.length; i++) {
-        final staff = staffs[i];
-        builder.element('part', nest: () {
-          builder.attribute('id', 'P${i + 1}');
-
-          for (int j = 0; j < staff.measures.length; j++) {
-            _buildMeasureXML(builder, staff.measures[j], j + 1);
-          }
-        });
-      }
-    });
+      },
+    );
 
     return builder.buildDocument().toXmlString(pretty: true);
   }
@@ -878,7 +900,9 @@ class MusicXMLParser {
       // Conta elementos
       final allElements = document.descendants.whereType<XmlElement>();
       final noteCount = allElements.where((e) => e.name.local == 'note').length;
-      final measureCount = allElements.where((e) => e.name.local == 'measure').length;
+      final measureCount = allElements
+          .where((e) => e.name.local == 'measure')
+          .length;
 
       final endTime = DateTime.now().millisecondsSinceEpoch;
 
@@ -887,7 +911,6 @@ class MusicXMLParser {
       info['measureCount'] = measureCount;
       info['elementCount'] = allElements.length;
       info['xmlSize'] = xmlContent.length;
-
     } catch (e) {
       info['error'] = 'Erro ao analisar performance: $e';
     }

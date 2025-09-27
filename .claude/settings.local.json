@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/aless/OneDrive/Imagens/Screenshots/**)",
-      "Bash(flutter:*)"
+      "Bash(flutter:*)",
+      "Read(//c/Users/aless/OneDrive/Área de Trabalho/**)",
+      "Bash(nc:*)",
+      "WebFetch(domain:w3c.github.io)"
     ],
     "deny": [],
     "ask": []

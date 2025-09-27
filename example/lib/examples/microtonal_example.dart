@@ -8,7 +8,7 @@ class MicrotonalExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Exemplo avançado: música microtonal com quartos de tom
+    // Exemplo de música microtonal com notação de quartos de tom
     final staff = Staff();
 
     final measure1 = Measure();
@@ -16,11 +16,10 @@ class MicrotonalExample extends StatelessWidget {
     measure1.add(KeySignature(0)); // Dó maior
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
 
-    // Série microtonal com quartos de tom
+    // Escala microtonal ascendente
     measure1.add(Note(
       pitch: const Pitch(step: 'C', octave: 4),
-      duration: const Duration(DurationType.quarter),
-      dynamicElement: Dynamic(type: DynamicType.mezzoForte),
+      duration: const Duration(DurationType.eighth),
     ));
 
     measure1.add(Note(
@@ -29,78 +28,40 @@ class MicrotonalExample extends StatelessWidget {
         octave: 4,
         accidentalType: AccidentalType.quarterToneSharp,
       ),
-      duration: const Duration(DurationType.quarter),
+      duration: const Duration(DurationType.eighth),
     ));
 
     measure1.add(Note(
-      pitch: Pitch.withAccidental(
-        step: 'C',
-        octave: 4,
-        accidentalType: AccidentalType.sharp,
-      ),
-      duration: const Duration(DurationType.quarter),
-    ));
-
-    measure1.add(Note(
-      pitch: Pitch.withAccidental(
-        step: 'C',
-        octave: 4,
-        accidentalType: AccidentalType.threeQuarterToneSharp,
-      ),
-      duration: const Duration(DurationType.quarter),
-    ));
-
-    final measure2 = Measure();
-
-    // Série descendente microtonal
-    measure2.add(Note(
-      pitch: const Pitch(step: 'D', octave: 4),
-      duration: const Duration(DurationType.quarter),
-    ));
-
-    measure2.add(Note(
       pitch: Pitch.withAccidental(
         step: 'D',
         octave: 4,
         accidentalType: AccidentalType.quarterToneFlat,
       ),
-      duration: const Duration(DurationType.quarter),
+      duration: const Duration(DurationType.eighth),
     ));
 
-    measure2.add(Note(
-      pitch: Pitch.withAccidental(
-        step: 'D',
-        octave: 4,
-        accidentalType: AccidentalType.flat,
-      ),
-      duration: const Duration(DurationType.quarter),
+    measure1.add(Note(
+      pitch: const Pitch(step: 'D', octave: 4),
+      duration: const Duration(DurationType.eighth),
     ));
 
-    measure2.add(Note(
+    measure1.add(Note(
       pitch: Pitch.withAccidental(
-        step: 'D',
+        step: 'E',
         octave: 4,
         accidentalType: AccidentalType.threeQuarterToneFlat,
       ),
       duration: const Duration(DurationType.quarter),
     ));
 
-    final measure3 = Measure();
+    final measure2 = Measure();
 
     // Acorde microtonal
-    measure3.add(Chord(
+    measure2.add(Chord(
       notes: [
         Note(
-          pitch: const Pitch(step: 'E', octave: 4),
-          duration: const Duration(DurationType.whole),
-        ),
-        Note(
-          pitch: Pitch.withAccidental(
-            step: 'G',
-            octave: 4,
-            accidentalType: AccidentalType.quarterToneSharp,
-          ),
-          duration: const Duration(DurationType.whole),
+          pitch: const Pitch(step: 'G', octave: 4),
+          duration: const Duration(DurationType.half),
         ),
         Note(
           pitch: Pitch.withAccidental(
@@ -108,14 +69,60 @@ class MicrotonalExample extends StatelessWidget {
             octave: 4,
             accidentalType: AccidentalType.quarterToneFlat,
           ),
-          duration: const Duration(DurationType.whole),
+          duration: const Duration(DurationType.half),
+        ),
+        Note(
+          pitch: Pitch.withAccidental(
+            step: 'D',
+            octave: 5,
+            accidentalType: AccidentalType.quarterToneSharp,
+          ),
+          duration: const Duration(DurationType.half),
         ),
       ],
-      duration: const Duration(DurationType.whole),
-      dynamic: Dynamic(type: DynamicType.fortissimo),
+      duration: const Duration(DurationType.half),
+      dynamic: Dynamic(type: DynamicType.piano),
+    ));
+
+    // Ornamento microtonal
+    measure2.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [
+        Ornament(type: OrnamentType.mordent, above: true),
+      ],
+    ));
+
+    final measure3 = Measure();
+
+    // Sequência final com saltos microtonais
+    measure3.add(Note(
+      pitch: Pitch.withAccidental(
+        step: 'F',
+        octave: 5,
+        accidentalType: AccidentalType.threeQuarterToneSharp,
+      ),
+      duration: const Duration(DurationType.eighth),
+    ));
+
+    measure3.add(Note(
+      pitch: const Pitch(step: 'C', octave: 4),
+      duration: const Duration(DurationType.eighth),
+    ));
+
+    measure3.add(Rest(duration: const Duration(DurationType.quarter)));
+
+    measure3.add(Note(
+      pitch: Pitch.withAccidental(
+        step: 'G',
+        octave: 3,
+        accidentalType: AccidentalType.quarterToneSharp,
+      ),
+      duration: const Duration(DurationType.half),
       ornaments: [
         Ornament(type: OrnamentType.fermata, above: true),
       ],
+      dynamicElement: Dynamic(type: DynamicType.pianissimo),
     ));
 
     staff.add(measure1);
@@ -139,12 +146,11 @@ class MicrotonalExample extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Música microtonal com quartos de tom:\\n'
-                    '• Série ascendente de quartos de tom em Dó\\n'
-                    '• Série descendente de quartos de tom em Ré\\n'
-                    '• Acorde microtonal com fermata\\n'
-                    '• Acidentes microtonais: ♯₄, ♯¾, ♭₄, ♭¾\\n'
-                    '• Dinâmicas variadas (mf, ff)',
+                    'Música com notação microtonal:\\n'
+                    '• Uso de acidentes de quarto de tom (sharp e flat)\\n'
+                    '• Acidentes de três quartos de tom\\n'
+                    '• Acordes com intervalos microtonais\\n'
+                    '• Escalas e melodias que exploram a microtonalidade',
                     style: TextStyle(fontSize: 14),
                   ),
                 ],
@@ -165,7 +171,7 @@ class MicrotonalExample extends StatelessWidget {
                   height: 300,
                   child: MusicScore(
                     staff: staff,
-                    theme: MusicScoreTheme.modern(),
+                    theme: MusicScoreTheme.dark(),
                   ),
                 ),
               ),

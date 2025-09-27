@@ -13,11 +13,13 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
   final List<PositionedElement> positionedElements;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
+  final double staffSpace; // CORREÇÃO: Usar staffSpace do LayoutEngine
 
   MusicPainter({
     required this.positionedElements,
     required this.metadata,
     required this.theme,
+    this.staffSpace = 10.0, // Valor padrão mais compacto
   });
 
   static const Map<String, int> _stepToDiatonic = {
@@ -36,15 +38,22 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
   void paint(Canvas canvas, Size size) {
     if (metadata.isNotLoaded) return;
 
-    final staffSpace =
-        metadata.getEngravingDefault('thickBarlineThickness') * 4;
+    // CORREÇÃO: Usar o staffSpace passado como parâmetro em vez de calcular incorretamente
 
     // Otimização: ordena elementos para melhor performance
-    final optimizedElements = PerformanceOptimizer.optimizeRenderOrder(positionedElements);
+    final optimizedElements = PerformanceOptimizer.optimizeRenderOrder(
+      positionedElements,
+    );
 
     final systems = optimizedElements.map((e) => e.system).toSet();
     for (final system in systems) {
-      _drawStaffLinesOptimized(canvas, size.width, 100.0 + (system * 120.0), staffSpace);
+      // CORREÇÃO: Posicionamento escalável das linhas da pauta
+      _drawStaffLinesOptimized(
+        canvas,
+        size.width,
+        50.0 + (system * staffSpace * 8),
+        staffSpace,
+      );
     }
 
     Clef currentClef = Clef(type: 'g');
@@ -118,9 +127,17 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
           _drawAccidental(canvas, element, currentClef, position, staffSpace);
         }
 
-      // === ELEMENTOS AVANÇADOS ===
+        // === ELEMENTOS AVANÇADOS ===
       } else if (element is Chord) {
-        drawChord(canvas, element, currentClef, position, staffSpace, metadata, theme);
+        drawChord(
+          canvas,
+          element,
+          currentClef,
+          position,
+          staffSpace,
+          metadata,
+          theme,
+        );
       } else if (element is Ornament) {
         drawOrnament(canvas, element, position, staffSpace, metadata, theme);
       } else if (element is Dynamic) {
@@ -285,7 +302,7 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         color: theme.noteheadColor,
         x: position.dx,
         y: noteY,
-        fontSize: staffSpace * 4,
+        fontSize: staffSpace * 3.5, // Tamanho consistente com outras notas
       );
       _drawArticulations(
         canvas,
@@ -296,8 +313,7 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         staffSpace,
       );
       final bbox = metadata.getGlyphBBox(note.duration.type.glyphName);
-      final noteheadWidth =
-          (bbox?['bBoxNE']?[0] ?? 0.0) * (staffSpace * 4 / 2048);
+      final noteheadWidth = (bbox?['bBoxNE']?[0] ?? 1.18) * staffSpace;
       final stemX = stemsGoUp ? position.dx + noteheadWidth : position.dx;
       stemPositions.add(Offset(stemX, noteY));
     }
@@ -349,16 +365,19 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     final glyphName = note.duration.type.glyphName;
 
     // Regra profissional: hastes para cima se a nota estiver na metade inferior do pentagrama
-    bool stemsGoUp = staffPosition > 0; // Corrigido: > 0 para hastes para cima quando abaixo da linha central
+    bool stemsGoUp =
+        staffPosition >
+        0; // Corrigido: > 0 para hastes para cima quando abaixo da linha central
 
     // Desenha a cabeça da nota
+    // Baseado nos metadados Bravura: noteheadBlack bBoxSW: [0.0, -0.5], bBoxNE: [1.18, 0.5]
     _drawGlyph(
       canvas: canvas,
       glyphName: glyphName,
       color: theme.noteheadColor,
       x: position.dx,
       y: noteY,
-      fontSize: staffSpace * 4,
+      fontSize: staffSpace * 3.5, // Tamanho apropriado para notas
     );
 
     _drawArticulations(canvas, note, stemsGoUp, position.dx, noteY, staffSpace);
@@ -372,8 +391,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
       // Obtém as dimensões precisas da cabeça da nota
       final bbox = metadata.getGlyphBBox(glyphName);
-      final noteheadWidth = (bbox?['bBoxNE']?[0] ?? 1200.0) * (staffSpace * 4 / 2048);
-      final noteheadHeight = (bbox?['bBoxNE']?[1] ?? 500.0) * (staffSpace * 4 / 2048);
+      // Usando valores dos metadados da Bravura para noteheadBlack: width=1.18, height=1.0 em staff spaces
+      final noteheadWidth = (bbox?['bBoxNE']?[0] ?? 1.18) * staffSpace;
+      final noteheadHeight = (bbox?['bBoxNE']?[1] ?? 0.5) * staffSpace;
 
       // Posicionamento preciso da haste
       double stemX;
@@ -395,7 +415,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         stemStartY = noteY + noteheadHeight * 0.1;
       }
 
-      double stemEndY = stemsGoUp ? stemStartY - stemHeight : stemStartY + stemHeight;
+      double stemEndY = stemsGoUp
+          ? stemStartY - stemHeight
+          : stemStartY + stemHeight;
 
       canvas.drawLine(
         Offset(stemX, stemStartY),
@@ -424,7 +446,7 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
           color: theme.stemColor,
           x: flagX,
           y: flagY,
-          fontSize: staffSpace * 4,
+          fontSize: staffSpace * 3.5, // Tamanho proporcional às notas
         );
       }
     }
@@ -467,14 +489,17 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     }
   }
 
-
   void _drawStaffLinesOptimized(
     Canvas canvas,
     double width,
     double y,
     double staffSpace,
   ) {
-    final path = PerformanceOptimizer.getStaffLinesPath(width, y - (2 * staffSpace), staffSpace);
+    final path = PerformanceOptimizer.getStaffLinesPath(
+      width,
+      y - (2 * staffSpace),
+      staffSpace,
+    );
     final paint = PerformanceOptimizer.getPaint(
       color: theme.staffLineColor,
       strokeWidth: metadata.getEngravingDefault('staffLineThickness'),
@@ -486,12 +511,17 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
   }
 
   void _drawClef(Canvas canvas, Clef clef, Offset position, double staffSpace) {
+    // A clave de sol deve ser posicionada de forma que sua linha da clave (2ª linha) fique no centro da pauta
+    // Segundo metadados Bravura: bBoxSW: [0.0, -2.632], bBoxNE: [2.684, 4.392]
+    // A clave precisa ser ajustada para que o ponto de referência fique na 2ª linha da pauta
     _drawGlyph(
       canvas: canvas,
       glyphName: 'gClef',
       color: theme.clefColor,
       x: position.dx,
-      y: position.dy + staffSpace,
+      y:
+          position.dy -
+          (staffSpace * 0.5), // Ajuste para alinhar com a 2ª linha da pauta
       fontSize: staffSpace * 4,
     );
   }
@@ -508,6 +538,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     double currentX = position.dx;
     for (int i = 0; i < count; i++) {
       final staffPosition = positions[i];
+      // Posicionamento correto baseado na posição das linhas da pauta
+      // staffPosition representa a posição relativa às linhas da pauta (0 = 3ª linha)
       final y = position.dy - (staffPosition * staffSpace / 2);
       _drawGlyph(
         canvas: canvas,
@@ -515,9 +547,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         color: theme.keySignatureColor,
         x: currentX,
         y: y,
-        fontSize: staffSpace * 4,
+        fontSize: staffSpace * 3.5, // Tamanho ligeiramente menor para acidentes
       );
-      currentX += 12;
+      currentX += staffSpace * 0.6; // Espaçamento mais apertado entre acidentes
     }
   }
 
@@ -529,21 +561,28 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
   ) {
     final numGlyph = 'timeSig${ts.numerator}';
     final denGlyph = 'timeSig${ts.denominator}';
+    // Posicionamento padrão SMuFL: números centralizados na pauta
+    // Numerador na posição da 4ª linha (1 staff space acima do centro)
+    // Denominador na posição da 2ª linha (1 staff space abaixo do centro)
     _drawGlyph(
       canvas: canvas,
       glyphName: numGlyph,
       color: theme.timeSignatureColor,
       x: position.dx,
-      y: position.dy - (1.5 * staffSpace),
-      fontSize: staffSpace * 4,
+      y:
+          position.dy -
+          (0.75 * staffSpace), // Numerador ligeiramente acima do centro
+      fontSize: staffSpace * 2.5, // Tamanho apropriado para fórmula de compasso
     );
     _drawGlyph(
       canvas: canvas,
       glyphName: denGlyph,
       color: theme.timeSignatureColor,
       x: position.dx,
-      y: position.dy + (1.5 * staffSpace),
-      fontSize: staffSpace * 4,
+      y:
+          position.dy +
+          (0.75 * staffSpace), // Denominador ligeiramente abaixo do centro
+      fontSize: staffSpace * 2.5, // Tamanho apropriado para fórmula de compasso
     );
   }
 
@@ -640,7 +679,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
     final staffPosition = _calculateStaffPosition(note.pitch, clef);
     final noteY = position.dy - (staffPosition * staffSpace / 2);
-    final accidentalX = position.dx - staffSpace * 1.5; // Posição à esquerda da nota
+    final accidentalX =
+        position.dx - staffSpace * 1.5; // Posição à esquerda da nota
 
     _drawGlyph(
       canvas: canvas,
@@ -659,10 +699,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     double staffSpace,
     MusicScoreTheme theme,
   ) {
-    TextStyle style = theme.textStyle ?? const TextStyle(
-      color: Colors.black,
-      fontSize: 12,
-    );
+    TextStyle style =
+        theme.textStyle ?? const TextStyle(color: Colors.black, fontSize: 12);
 
     switch (text.type) {
       case TextType.dynamics:
@@ -749,11 +787,13 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     }
 
     if (text.isNotEmpty) {
-      final style = theme.tempoTextStyle ?? const TextStyle(
-        color: Colors.black,
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-      );
+      final style =
+          theme.tempoTextStyle ??
+          const TextStyle(
+            color: Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          );
 
       final textPainter = TextPainter(
         text: TextSpan(text: text, style: style),

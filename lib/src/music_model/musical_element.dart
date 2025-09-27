@@ -2,7 +2,6 @@
 
 import 'pitch.dart';
 import 'duration.dart';
-import 'advanced_elements.dart';
 
 // Re-exporta para que o usuário do pacote tenha acesso fácil.
 export 'pitch.dart';

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'src/layout/layout_engine.dart';
 import 'src/music_model/musical_element.dart';
-import 'src/rendering/music_painter.dart';
+import 'src/rendering/new_music_painter.dart';
 import 'src/smufl/smufl_metadata_loader.dart';
 import 'src/theme/music_score_theme.dart';
 
@@ -11,15 +11,18 @@ export 'src/theme/music_score_theme.dart';
 export 'src/layout/layout_engine.dart'; // Exporta a classe PositionedElement
 export 'src/parsers/json_parser.dart'; // Exporta o parser JSON
 export 'src/smufl/glyph_categories.dart'; // Exporta categorias de glifos
+export 'src/smufl/smufl_metadata_loader.dart';
 
 class MusicScore extends StatefulWidget {
   final Staff staff;
   final MusicScoreTheme theme;
+  final double staffSpace; // CORREÇÃO: Parâmetro para controlar o tamanho
 
   const MusicScore({
     super.key,
     required this.staff,
     this.theme = const MusicScoreTheme(),
+    this.staffSpace = 12.0, // Valor apropriado para o novo sistema
   });
 
   @override
@@ -42,22 +45,28 @@ class _MusicScoreState extends State<MusicScore> {
             final layoutEngine = LayoutEngine(
               widget.staff,
               availableWidth: constraints.maxWidth,
+              staffSpace: widget.staffSpace, // CORREÇÃO: Usar o mesmo staffSpace
             );
             final positionedElements = layoutEngine.layout();
 
             final lastSystem = positionedElements.isNotEmpty
                 ? positionedElements.last.system
                 : 0;
-            final totalHeight = 150.0 + (lastSystem * 120.0);
+            // Altura baseada no sistema de coordenadas
+            final staffMargin = widget.staffSpace * 2;
+            final staffHeight = widget.staffSpace * 4;
+            final systemSpacing = widget.staffSpace * 10;
+            final totalHeight = (staffMargin * 2) + staffHeight + (lastSystem * systemSpacing);
 
             return SizedBox(
               height: totalHeight,
               child: CustomPaint(
                 size: Size.infinite,
-                painter: MusicPainter(
+                painter: NewMusicPainter(
                   positionedElements: positionedElements,
                   metadata: SmuflMetadata(),
                   theme: widget.theme,
+                  staffSpace: widget.staffSpace, // Usar o novo sistema
                 ),
               ),
             );

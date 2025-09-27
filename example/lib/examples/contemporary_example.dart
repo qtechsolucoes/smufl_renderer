@@ -28,7 +28,7 @@ class ContemporaryExample extends StatelessWidget {
         Ornament(type: OrnamentType.shake, above: true),
       ],
       techniques: [
-        PlayingTechnique(type: TechniqueType.glissando),
+        // PlayingTechnique(type: TechniqueType.glissando), // Corrigir valor do enum
       ],
       dynamicElement: Dynamic(type: DynamicType.pianississimo),
     ));
@@ -50,7 +50,7 @@ class ContemporaryExample extends StatelessWidget {
       ),
       duration: const Duration(DurationType.sixteenth),
       techniques: [
-        PlayingTechnique(type: TechniqueType.harmonic),
+        // PlayingTechnique(type: TechniqueType.harmonic), // Corrigir valor do enum
       ],
     ));
 
@@ -165,7 +165,7 @@ class ContemporaryExample extends StatelessWidget {
       pitch: const Pitch(step: 'G', octave: 3),
       duration: const Duration(DurationType.quarter),
       techniques: [
-        PlayingTechnique(type: TechniqueType.glissando),
+        // PlayingTechnique(type: TechniqueType.glissando), // Corrigir valor do enum
       ],
       dynamicElement: Dynamic(type: DynamicType.fortississimo),
     ));
@@ -177,7 +177,7 @@ class ContemporaryExample extends StatelessWidget {
       pitch: const Pitch(step: 'F', octave: 4),
       duration: const Duration(DurationType.eighth),
       techniques: [
-        PlayingTechnique(type: TechniqueType.flutterTongue),
+        // PlayingTechnique(type: TechniqueType.flutterTongue), // Corrigir valor do enum
       ],
       ornaments: [
         Ornament(type: OrnamentType.wavyLine, above: true),
@@ -188,7 +188,7 @@ class ContemporaryExample extends StatelessWidget {
       pitch: const Pitch(step: 'E', octave: 4),
       duration: const Duration(DurationType.eighth),
       techniques: [
-        PlayingTechnique(type: TechniqueType.bisbigliando),
+        // PlayingTechnique(type: TechniqueType.bisbigliando), // Corrigir valor do enum
       ],
     ));
 
@@ -198,6 +198,9 @@ class ContemporaryExample extends StatelessWidget {
         Note(
           pitch: const Pitch(step: 'C', octave: 3),
           duration: const Duration(DurationType.half),
+          techniques: [
+            // PlayingTechnique(type: TechniqueType.harmonic), // Corrigir valor do enum
+          ],
         ),
         Note(
           pitch: Pitch.withAccidental(
@@ -216,9 +219,6 @@ class ContemporaryExample extends StatelessWidget {
       dynamic: Dynamic(type: DynamicType.niente),
       ornaments: [
         Ornament(type: OrnamentType.fermata, above: true),
-      ],
-      techniques: [
-        PlayingTechnique(type: TechniqueType.harmonic),
       ],
     ));
 

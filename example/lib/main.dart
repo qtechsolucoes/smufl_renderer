@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:smufl_renderer/smufl_renderer.dart';
 import 'examples/basic_example.dart';
 import 'examples/advanced_example.dart';
 import 'examples/complex_example.dart';
@@ -24,7 +25,10 @@ Future<void> main() async {
       rootBundle.load('packages/smufl_renderer/assets/smufl/Bravura.otf'));
   await fontLoader.load();
 
-  // 5. Correr a aplicação APENAS DEPOIS de a fonte estar carregada
+  // 5. Carregar os metadados da fonte SMuFL
+  await SmuflMetadata().load();
+
+  // 6. Correr a aplicação APENAS DEPOIS de a fonte e metadados estarem carregados
   runApp(const MyApp());
 }
 

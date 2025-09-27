@@ -8,50 +8,40 @@ class BasicExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Exemplo básico: escala de Dó maior com ligadura
+    // Partitura básica com elementos essenciais
     final staff = Staff();
 
     final measure1 = Measure();
     measure1.add(Clef(type: 'g'));
-    measure1.add(KeySignature(0)); // Dó maior
+    measure1.add(KeySignature(1)); // Sol maior
     measure1.add(TimeSignature(numerator: 4, denominator: 4));
-
-    // Escala ascendente com ligadura
     measure1.add(Note(
-      pitch: const Pitch(step: 'C', octave: 4),
-      duration: const Duration(DurationType.quarter),
-      slur: SlurType.start,
-    ));
-    measure1.add(Note(
-      pitch: const Pitch(step: 'D', octave: 4),
+      pitch: const Pitch(step: 'G', octave: 4),
       duration: const Duration(DurationType.quarter),
     ));
     measure1.add(Note(
-      pitch: const Pitch(step: 'E', octave: 4),
+      pitch: const Pitch(step: 'A', octave: 4),
       duration: const Duration(DurationType.quarter),
     ));
     measure1.add(Note(
-      pitch: const Pitch(step: 'F', octave: 4),
+      pitch: const Pitch(step: 'B', octave: 4),
       duration: const Duration(DurationType.quarter),
-      slur: SlurType.end,
+    ));
+    measure1.add(Note(
+      pitch: const Pitch(step: 'C', octave: 5),
+      duration: const Duration(DurationType.quarter),
     ));
 
     final measure2 = Measure();
     measure2.add(Note(
-      pitch: const Pitch(step: 'G', octave: 4),
-      duration: const Duration(DurationType.quarter),
+      pitch: const Pitch(step: 'D', octave: 5),
+      duration: const Duration(DurationType.half),
     ));
-    measure2.add(Note(
-      pitch: const Pitch(step: 'A', octave: 4),
-      duration: const Duration(DurationType.quarter),
-    ));
+    measure2.add(Rest(duration: const Duration(DurationType.quarter)));
     measure2.add(Note(
       pitch: const Pitch(step: 'B', octave: 4),
       duration: const Duration(DurationType.quarter),
-    ));
-    measure2.add(Note(
-      pitch: const Pitch(step: 'C', octave: 5),
-      duration: const Duration(DurationType.quarter),
+      articulations: [ArticulationType.staccato],
     ));
 
     staff.add(measure1);
@@ -74,10 +64,13 @@ class BasicExample extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Escala de Dó maior com ligadura (slur)\n'
-                    '• Clave de Sol\n'
-                    '• Fórmula de compasso 4/4\n'
-                    '• Ligadura conectando as primeiras 4 notas',
+                    'Uma partitura simples para demonstrar os elementos fundamentais:\\n'
+                    '• Clave de Sol\\n'
+                    '• Armadura de Clave (Sol Maior)\\n'
+                    '• Fórmula de Compasso (4/4)\\n'
+                    '• Notas com diferentes alturas e durações\\n'
+                    '• Pausas\\n'
+                    '• Articulações (Staccato)',
                     style: TextStyle(fontSize: 14),
                   ),
                 ],
@@ -85,6 +78,7 @@ class BasicExample extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          // AQUI ESTÁ A CORREÇÃO:
           Expanded(
             child: Container(
               width: double.infinity,
@@ -95,10 +89,10 @@ class BasicExample extends StatelessWidget {
               ),
               child: SingleChildScrollView(
                 child: SizedBox(
-                  height: 200,
+                  height: 150, // Altura mais compacta para a partitura
                   child: MusicScore(
                     staff: staff,
-                    theme: MusicScoreTheme.standard(),
+                    staffSpace: 12.0, // Tamanho mais apropriado
                   ),
                 ),
               ),

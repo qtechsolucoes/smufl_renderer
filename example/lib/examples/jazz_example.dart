@@ -83,7 +83,7 @@ class JazzExample extends StatelessWidget {
       ),
       duration: const Duration(DurationType.quarter),
       techniques: [
-        PlayingTechnique(type: TechniqueType.glissando),
+        // PlayingTechnique(type: TechniqueType.glissando), // Corrigir valor do enum
       ],
       ornaments: [
         Ornament(type: OrnamentType.mordent, above: true),
@@ -273,7 +273,7 @@ class JazzExample extends StatelessWidget {
                   height: 300,
                   child: MusicScore(
                     staff: staff,
-                    theme: MusicScoreTheme.elegant(),
+                    theme: MusicScoreTheme.colorful(),
                   ),
                 ),
               ),
