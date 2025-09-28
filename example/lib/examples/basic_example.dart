@@ -64,13 +64,13 @@ class BasicExample extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Uma partitura simples para demonstrar os elementos fundamentais:\\n'
-                    '• Clave de Sol\\n'
-                    '• Armadura de Clave (Sol Maior)\\n'
-                    '• Fórmula de Compasso (4/4)\\n'
-                    '• Notas com diferentes alturas e durações\\n'
-                    '• Pausas\\n'
-                    '• Articulações (Staccato)',
+                    'Uma partitura simples para demonstrar os elementos fundamentais:\n\n'
+                    '• Clave de Sol,'
+                    '• Armadura de Clave (Sol Maior),'
+                    '• Fórmula de Compasso (4/4),'
+                    '• Notas com diferentes alturas e durações,'
+                    '• Pausas,'
+                    '• Articulações (Staccato).',
                     style: TextStyle(fontSize: 14),
                   ),
                 ],

@@ -1,14 +1,15 @@
 // lib/src/rendering/staff_renderer.dart
+// VERSÃO CORRIGIDA E ATUALIZADA - Compatível com estrutura existente
 
 import 'package:flutter/material.dart';
 import '../layout/layout_engine.dart';
 import '../music_model/musical_element.dart';
 import '../smufl/smufl_metadata_loader.dart';
-import '../smufl/smufl_coordinates.dart';
 import '../theme/music_score_theme.dart';
 import 'staff_coordinate_system.dart';
 
 /// Renderizador de pauta com posicionamento correto baseado em SMuFL
+/// VERSÃO CORRIGIDA com todas as melhorias
 class StaffRenderer {
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
@@ -18,7 +19,6 @@ class StaffRenderer {
   late final double glyphSize;
   late final double staffLineThickness;
   late final double stemThickness;
-  late final SmuflGlyphPositioner positioner;
 
   // Cache de posições de claves
   Clef? currentClef;
@@ -28,16 +28,10 @@ class StaffRenderer {
     required this.metadata,
     required this.theme,
   }) {
-    // Configuração correta dos tamanhos segundo o metadata Bravura
-    glyphSize = coordinates.staffSpace * 4.0; // Tamanho padrão para glifos
-    staffLineThickness = SmuflCoordinates.getStaffLineThickness(coordinates.staffSpace);
-    stemThickness = SmuflCoordinates.getStemThickness(coordinates.staffSpace);
-
-    // Inicializar posicionador baseado em anchors SMuFL
-    positioner = SmuflGlyphPositioner(
-      metadata: metadata,
-      staffSpace: coordinates.staffSpace,
-    );
+    glyphSize = coordinates.staffSpace * 4.0;
+    staffLineThickness =
+        metadata.getEngravingDefault('staffLineThickness') * 2.5;
+    stemThickness = metadata.getEngravingDefault('stemThickness') * 2.5;
   }
 
   /// Renderiza a pauta completa com todos os elementos
@@ -48,30 +42,16 @@ class StaffRenderer {
     // 2. Resetar clave atual
     currentClef = null;
 
-    // 3. Coletar notas e suas posições para renderização de beams
-    final notes = <Note>[];
-    final notePositions = <Offset>[];
+    // 3. Coletar grupos para processamento
+    final beamGroups = _identifyBeamGroups(elements);
 
-    // 4. Renderizar elementos em ordem e coletar dados para beams
+    // 4. Renderizar elementos em ordem
     for (final positioned in elements) {
       _renderElement(canvas, positioned);
-
-      // Coletar notas para processamento de beams
-      if (positioned.element is Note) {
-        final note = positioned.element as Note;
-        notes.add(note);
-
-        // Calcular posição da nota baseada na altura
-        final staffPosition = _calculateStaffPosition(note.pitch);
-        final noteY = coordinates.staffBaseline.dy + (staffPosition * coordinates.staffSpace * 0.5);
-        notePositions.add(Offset(positioned.position.dx, noteY));
-      }
     }
 
-    // 5. Renderizar beams após todos os elementos individuais
-    if (notes.isNotEmpty) {
-      _renderBeams(canvas, notes, notePositions);
-    }
+    // 5. Renderizar beams após elementos individuais
+    _renderBeamGroups(canvas, beamGroups, elements);
   }
 
   void _drawStaffLines(Canvas canvas, double width) {
@@ -85,7 +65,7 @@ class StaffRenderer {
       final y = coordinates.getStaffLineY(line);
       canvas.drawLine(
         Offset(coordinates.staffBaseline.dx, y),
-        Offset(width - 20, y), // Margem direita
+        Offset(width - 20, y),
         paint,
       );
     }
@@ -96,7 +76,7 @@ class StaffRenderer {
     final basePosition = positioned.position;
 
     if (element is Clef) {
-      currentClef = element; // Atualizar clave atual
+      currentClef = element;
       _renderClef(canvas, element, basePosition);
     } else if (element is KeySignature) {
       _renderKeySignature(canvas, element, basePosition);
@@ -110,8 +90,6 @@ class StaffRenderer {
       _renderBarline(canvas, basePosition);
     } else if (element is Chord) {
       _renderChord(canvas, element, basePosition);
-    } else if (element.runtimeType.toString() == 'Tuplet') {
-      _renderTuplet(canvas, element, basePosition);
     }
   }
 
@@ -119,73 +97,34 @@ class StaffRenderer {
     final glyphName = clef.glyphName;
     double yOffset = 0;
 
-    // CORREÇÃO DEFINITIVA: Posicionamento preciso baseado nas especificações musicais oficiais
-    // Referências: VexFlow, MuseScore, LilyPond e padrões de notação musical
+    // CORREÇÃO: Posicionamento baseado no tipo real de clave
     switch (clef.actualClefType) {
       case ClefType.treble:
       case ClefType.treble8va:
       case ClefType.treble8vb:
-      case ClefType.treble15ma:
-      case ClefType.treble15mb:
-        // TREBLE CLEF: Espiral na 2ª linha (G4)
-        // Padrão oficial: a espiral da clave deve envolver a 2ª linha
-        yOffset = coordinates.getStaffLineY(2) - coordinates.staffBaseline.dy + (coordinates.staffSpace * 0.05);
+        // Clave de Sol: espiral na 2ª linha
+        yOffset = coordinates.getStaffLineY(2) - coordinates.staffBaseline.dy;
         break;
 
       case ClefType.bass:
       case ClefType.bass8va:
       case ClefType.bass8vb:
-      case ClefType.bass15ma:
-      case ClefType.bass15mb:
-        // BASS CLEF: Linha de referência na 4ª linha (F3)
-        // Padrão oficial: os dois pontos devem estar na 4ª linha
-        yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy + (coordinates.staffSpace * 0.1);
-        break;
-
-      case ClefType.bassThirdLine:
-        // BASS CLEF alternativo: na 3ª linha
-        yOffset = coordinates.getStaffLineY(3) - coordinates.staffBaseline.dy + (coordinates.staffSpace * 0.1);
-        break;
-
-      case ClefType.soprano:
-        // SOPRANO CLEF: Dó na 1ª linha
-        yOffset = coordinates.getStaffLineY(1) - coordinates.staffBaseline.dy;
-        break;
-
-      case ClefType.mezzoSoprano:
-        // MEZZO-SOPRANO CLEF: Dó na 2ª linha
-        yOffset = coordinates.getStaffLineY(2) - coordinates.staffBaseline.dy;
-        break;
-
-      case ClefType.alto:
-        // ALTO CLEF: Dó na 3ª linha (middle C)
-        // Padrão oficial: centro da clave deve estar na 3ª linha
-        yOffset = coordinates.getStaffLineY(3) - coordinates.staffBaseline.dy;
-        break;
-
-      case ClefType.tenor:
-        // TENOR CLEF: Dó na 4ª linha
-        // Padrão oficial: centro da clave deve estar na 4ª linha
+        // Clave de Fá: pontos na 4ª linha
         yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
         break;
 
-      case ClefType.baritone:
-        // BARITONE CLEF: Dó na 5ª linha
-        yOffset = coordinates.getStaffLineY(5) - coordinates.staffBaseline.dy;
-        break;
-
-      case ClefType.c8vb:
-        // C CLEF oitava abaixo: Dó na 3ª linha (como alto clef)
-        yOffset = coordinates.getStaffLineY(3) - coordinates.staffBaseline.dy;
-        break;
-
-      case ClefType.percussion:
-      case ClefType.percussion2:
-      case ClefType.tab6:
-      case ClefType.tab4:
-        // Claves especiais: centralizar no pentagrama
+      case ClefType.alto:
+        // Clave de Dó: centro na 3ª linha
         yOffset = 0;
         break;
+
+      case ClefType.tenor:
+        // Clave de Dó tenor: centro na 4ª linha
+        yOffset = coordinates.getStaffLineY(4) - coordinates.staffBaseline.dy;
+        break;
+
+      default:
+        yOffset = 0;
     }
 
     _drawGlyph(
@@ -198,37 +137,59 @@ class StaffRenderer {
     );
   }
 
-
   void _renderKeySignature(
     Canvas canvas,
     KeySignature ks,
     Offset basePosition,
   ) {
-    if (ks.count == 0) return;
+    if (ks.count == 0 || currentClef == null) return;
 
     final glyphName = ks.count > 0 ? 'accidentalSharp' : 'accidentalFlat';
     final count = ks.count.abs();
 
-    // Usar o sistema de coordenadas correto para obter posições precisas
-    final positions = coordinates.getKeySignaturePositions(
-      ks.count,
-      clef: currentClef?.actualClefType.name ?? 'treble',
+    // CORREÇÃO: Usar posições corretas baseadas na clave
+    final positions = _getKeySignaturePositions(
+      currentClef!.actualClefType,
+      ks.count > 0,
     );
 
     double currentX = basePosition.dx;
-    final spacing = coordinates.staffSpace * 0.8; // Espaçamento consistente
+    const spacing = 0.8;
 
     for (int i = 0; i < count && i < positions.length; i++) {
+      final staffPos = positions[i];
+      final y =
+          coordinates.staffBaseline.dy -
+          (staffPos * coordinates.staffSpace * 0.5);
+
       _drawGlyph(
         canvas: canvas,
         glyphName: glyphName,
-        position: Offset(currentX, positions[i]),
-        size: glyphSize * 0.8,
+        position: Offset(currentX, y),
+        size: glyphSize * 0.9,
         color: theme.keySignatureColor,
         centerVertically: true,
       );
 
-      currentX += spacing;
+      currentX += spacing * coordinates.staffSpace;
+    }
+  }
+
+  List<int> _getKeySignaturePositions(ClefType clefType, bool isSharp) {
+    switch (clefType) {
+      case ClefType.treble:
+        return isSharp
+            ? [6, 3, 7, 4, 1, 5, 2] // F# C# G# D# A# E# B#
+            : [2, 5, 1, 4, 0, 3, -1]; // Bb Eb Ab Db Gb Cb Fb
+
+      case ClefType.bass:
+        return isSharp ? [4, 1, 5, 2, -1, 3, 0] : [0, 3, -1, 2, -2, 1, -3];
+
+      case ClefType.alto:
+        return isSharp ? [5, 2, 6, 3, 0, 4, 1] : [1, 4, 0, 3, -1, 2, -2];
+
+      default:
+        return [];
     }
   }
 
@@ -237,23 +198,20 @@ class StaffRenderer {
     TimeSignature ts,
     Offset basePosition,
   ) {
-    final numeratorGlyph = 'timeSig${ts.numerator}';
-    final denominatorGlyph = 'timeSig${ts.denominator}';
-
-    // Numerador na parte superior da pauta (entre linhas 4-5)
+    // Numerador
     _drawGlyph(
       canvas: canvas,
-      glyphName: numeratorGlyph,
+      glyphName: 'timeSig${ts.numerator}',
       position: Offset(basePosition.dx, coordinates.getStaffLineY(4)),
       size: glyphSize,
       color: theme.timeSignatureColor,
       centerVertically: true,
     );
 
-    // Denominador na parte inferior da pauta (entre linhas 2-3)
+    // Denominador
     _drawGlyph(
       canvas: canvas,
-      glyphName: denominatorGlyph,
+      glyphName: 'timeSig${ts.denominator}',
       position: Offset(basePosition.dx, coordinates.getStaffLineY(2)),
       size: glyphSize,
       color: theme.timeSignatureColor,
@@ -262,21 +220,21 @@ class StaffRenderer {
   }
 
   void _renderNote(Canvas canvas, Note note, Offset basePosition) {
-    // Calcular posição vertical baseada na altura da nota
+    // Calcular posição vertical
     final staffPosition = _calculateStaffPosition(note.pitch);
     final noteY =
         coordinates.staffBaseline.dy -
         (staffPosition * coordinates.staffSpace * 0.5);
 
-    // Desenhar linhas suplementares se necessário
+    // Desenhar linhas suplementares
     _drawLedgerLines(canvas, basePosition.dx, staffPosition);
 
-    // Desenhar acidente se presente
+    // Desenhar acidente
     if (note.pitch.accidentalGlyph != null) {
       _renderAccidental(canvas, note, Offset(basePosition.dx, noteY));
     }
 
-    // Desenhar cabeça da nota centralizada
+    // Desenhar cabeça da nota
     _drawGlyph(
       canvas: canvas,
       glyphName: note.duration.type.glyphName,
@@ -287,17 +245,17 @@ class StaffRenderer {
       centerHorizontally: true,
     );
 
-    // Desenhar haste se necessário
-    if (note.duration.type != DurationType.whole) {
-      _renderStem(canvas, note, Offset(basePosition.dx, noteY), staffPosition);
+    // CORREÇÃO: Desenhar haste corretamente
+    if (note.duration.type != DurationType.whole && note.beam == null) {
+      _renderStem(
+        canvas,
+        Offset(basePosition.dx, noteY),
+        staffPosition,
+        note.duration.type,
+      );
     }
 
-    // Desenhar pontos de aumento
-    if (note.duration.dots > 0) {
-      _renderAugmentationDots(canvas, note, Offset(basePosition.dx, noteY), staffPosition);
-    }
-
-    // Desenhar articulações
+    // CORREÇÃO: Articulações independentes
     _renderArticulations(
       canvas,
       note,
@@ -305,132 +263,43 @@ class StaffRenderer {
       staffPosition,
     );
 
-    // Desenhar ornamentos
-    _renderOrnaments(
-      canvas,
-      note,
-      Offset(basePosition.dx, noteY),
-    );
-
-    // Desenhar dinâmica
-    _renderDynamic(
-      canvas,
-      note,
-      Offset(basePosition.dx, noteY),
-    );
-  }
-
-  int _calculateStaffPosition(Pitch pitch) {
-    // CORREÇÃO: Usar enum ClefType ao invés do método type deprecado
-    // Calcular posição na pauta (0 = linha central B4 para clave de sol)
-    final clefType = currentClef?.actualClefType ?? ClefType.treble;
-
-    if (clefType == ClefType.treble || currentClef == null) {
-      // Para clave de sol: B4 = 0 (linha central)
-      const stepToPosition = {
-        'C': 0,
-        'D': 1,
-        'E': 2,
-        'F': 3,
-        'G': 4,
-        'A': 5,
-        'B': 6,
-      };
-
-      final basePosition = stepToPosition[pitch.step] ?? 0;
-      final octaveOffset = (pitch.octave - 4) * 7;
-
-      // Ajuste para B estar na posição correta
-      if (pitch.step == 'B') {
-        return octaveOffset;
-      } else if (pitch.octave == 5) {
-        return basePosition + 7 - 6; // C5 e acima
-      } else if (pitch.octave == 4) {
-        return basePosition - 6; // Notas abaixo de B4
-      } else {
-        return basePosition + octaveOffset - 6;
-      }
-    }
-
-    // Para outras claves
-    return 0;
-  }
-
-  void _drawLedgerLines(Canvas canvas, double x, int staffPosition) {
-    if (!theme.showLedgerLines) return;
-
-    // CORREÇÃO: Usar valores oficiais SMuFL para linhas suplementares
-    final paint = Paint()
-      ..color = theme.staffLineColor
-      ..strokeWidth = SmuflCoordinates.getLedgerLineThickness(coordinates.staffSpace);
-
-    // CORREÇÃO: Usar extensão oficial SMuFL
-    final extension = SmuflCoordinates.getLedgerLineExtension(coordinates.staffSpace);
-
-    // Estimar largura da nota baseado no metadata (ou usar valor padrão)
-    final noteWidth = coordinates.staffSpace * 1.18; // Largura padrão estimada
-    final totalWidth = noteWidth + (2 * extension);
-    final halfWidth = totalWidth * 0.5;
-
-    // Linhas suplementares superiores (acima da pauta)
-    // staffPosition < -4 significa acima da 1ª linha
-    if (staffPosition < -4) {
-      for (int pos = -6; pos >= staffPosition; pos -= 2) {
-        final y = coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
-        canvas.drawLine(
-          Offset(x - halfWidth, y),
-          Offset(x + halfWidth, y),
-          paint,
-        );
-      }
-    }
-
-    // Linhas suplementares inferiores (abaixo da pauta)
-    // staffPosition > 4 significa abaixo da 5ª linha
-    if (staffPosition > 4) {
-      for (int pos = 6; pos <= staffPosition; pos += 2) {
-        final y = coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
-        canvas.drawLine(
-          Offset(x - halfWidth, y),
-          Offset(x + halfWidth, y),
-          paint,
-        );
-      }
+    // Pontos de aumento
+    if (note.duration.dots > 0) {
+      _renderAugmentationDots(
+        canvas,
+        note,
+        Offset(basePosition.dx, noteY),
+        staffPosition,
+      );
     }
   }
 
   void _renderStem(
     Canvas canvas,
-    Note note,
-    Offset notePosition,
+    Offset notePos,
     int staffPosition,
-  ) {
-    // CORREÇÃO: Voltar ao método que funcionava antes, mantendo a regra musical correta
-    // Usar posição Y direta para determinar direção da haste
-    // 3ª linha (baseline) é a referência
-    final middleLineY = coordinates.staffBaseline.dy;
+    DurationType duration, {
+    double? customStemFactor,
+  }) {
+    // CORREÇÃO: Direção baseada na posição
+    final stemUp = staffPosition <= 0;
 
-    // Regra musical correta:
-    // - Acima da 3ª linha (Y menor) -> hastes para baixo
-    // - Abaixo da 3ª linha (Y maior) -> hastes para cima
-    // - Na 3ª linha -> hastes para baixo (convenção)
-    final stemsUp = notePosition.dy > middleLineY;
-    final stemHeight = SmuflCoordinates.getStemHeight(coordinates.staffSpace);
+    final noteWidth = coordinates.staffSpace * 1.18;
+    // Usa o fator customizado ou o padrão 3.5
+    final stemHeight = coordinates.staffSpace * (customStemFactor ?? 3.5);
 
-    // Posicionamento correto da haste considerando centralização da nota
-    final noteWidth = coordinates.staffSpace * 1.18; // Largura padrão da cabeça
-    final halfNoteWidth = noteWidth * 0.5;
-    final stemX = stemsUp
-        ? notePosition.dx + halfNoteWidth - (stemThickness * 0.5) // Direita para hastes para cima
-        : notePosition.dx - halfNoteWidth + (stemThickness * 0.5); // Esquerda para hastes para baixo
+    // CORREÇÃO: Posicionamento X correto
+    final stemX = stemUp
+        ? notePos.dx + (noteWidth * 0.45)
+        : notePos.dx - (noteWidth * 0.45);
 
-    // Calcular posições Y da haste
-    final stemStartY = notePosition.dy;
-    final stemEndY = stemsUp
-        ? stemStartY - stemHeight
-        : stemStartY + stemHeight;
+    // CORREÇÃO: Posições Y corretas
+    final stemStartY = stemUp
+        ? notePos.dy + (coordinates.staffSpace * 0.1)
+        : notePos.dy - (coordinates.staffSpace * 0.1);
 
-    // Desenhar haste
+    final stemEndY = stemUp ? stemStartY - stemHeight : stemStartY + stemHeight;
+
     final stemPaint = Paint()
       ..color = theme.stemColor
       ..strokeWidth = stemThickness
@@ -442,233 +311,69 @@ class StaffRenderer {
       stemPaint,
     );
 
-    // Desenhar bandeirola se necessário (apenas se não estiver em um beam)
-    if (note.beam == null && note.duration.type.value < 1.0) {
-      _renderFlag(canvas, note, Offset(stemX, stemEndY), stemsUp);
+    // Bandeirola se necessário
+    if (duration.value < 0.25) {
+      _renderFlag(canvas, Offset(stemX, stemEndY), duration, stemUp);
     }
   }
 
-  void _renderFlag(Canvas canvas, Note note, Offset stemEnd, bool stemsUp) {
+  void _renderFlag(
+    Canvas canvas,
+    Offset stemEnd,
+    DurationType duration,
+    bool stemUp,
+  ) {
     String flagGlyph;
 
-    // CORREÇÃO: Implementar todas as durações com bandeirolas
-    switch (note.duration.type) {
+    switch (duration) {
       case DurationType.eighth:
-        flagGlyph = stemsUp ? 'flag8thUp' : 'flag8thDown';
+        flagGlyph = stemUp ? 'flag8thUp' : 'flag8thDown';
         break;
       case DurationType.sixteenth:
-        flagGlyph = stemsUp ? 'flag16thUp' : 'flag16thDown';
+        flagGlyph = stemUp ? 'flag16thUp' : 'flag16thDown';
         break;
       case DurationType.thirtySecond:
-        flagGlyph = stemsUp ? 'flag32ndUp' : 'flag32ndDown';
+        flagGlyph = stemUp ? 'flag32ndUp' : 'flag32ndDown';
         break;
       case DurationType.sixtyFourth:
-        flagGlyph = stemsUp ? 'flag64thUp' : 'flag64thDown';
-        break;
-      case DurationType.oneHundredTwentyEighth:
-        flagGlyph = stemsUp ? 'flag128thUp' : 'flag128thDown';
+        flagGlyph = stemUp ? 'flag64thUp' : 'flag64thDown';
         break;
       default:
-        return; // Sem bandeirola para esta duração
+        return;
     }
+    // Crie um deslocamento vertical.
+    // Use um valor pequeno, baseado no staffSpace, para manter a proporção.
+    final double yOffset = coordinates.staffSpace * -2; // Ajuste este valor
 
-    // CORREÇÃO: Posicionamento preciso da bandeirola no final da haste
-    // Bandeirolas devem estar alinhadas com o final da haste, sem offset adicional
+    // Crie a nova posição aplicando o deslocamento
+    final adjustedPosition = Offset(stemEnd.dx, stemEnd.dy + yOffset);
+
     _drawGlyph(
       canvas: canvas,
       glyphName: flagGlyph,
-      position: Offset(stemEnd.dx, stemEnd.dy),
+      position: adjustedPosition,
       size: glyphSize,
       color: theme.stemColor,
       centerVertically: false,
-      centerHorizontally: false, // Bandeirolas alinhadas à esquerda da haste
-    );
-  }
-
-  /// Renderiza barras de ligadura (beams) conectando grupos de notas
-  void _renderBeams(Canvas canvas, List<Note> notes, List<Offset> notePositions) {
-    if (notes.length < 2) return;
-
-    // Encontrar grupos de notas conectadas por beams
-    final beamGroups = <List<int>>[];
-    List<int> currentGroup = [];
-
-    for (int i = 0; i < notes.length; i++) {
-      final note = notes[i];
-
-      if (note.beam == BeamType.start) {
-        // Iniciar novo grupo
-        if (currentGroup.isNotEmpty) {
-          beamGroups.add(List.from(currentGroup));
-        }
-        currentGroup = [i];
-      } else if (note.beam == BeamType.inner || note.beam == BeamType.end) {
-        // Adicionar ao grupo atual
-        currentGroup.add(i);
-
-        if (note.beam == BeamType.end) {
-          // Finalizar grupo
-          beamGroups.add(List.from(currentGroup));
-          currentGroup = [];
-        }
-      }
-    }
-
-    // Adicionar grupo restante se existir
-    if (currentGroup.isNotEmpty) {
-      beamGroups.add(currentGroup);
-    }
-
-    // Renderizar cada grupo de beams
-    for (final group in beamGroups) {
-      if (group.length >= 2) {
-        _renderBeamGroup(canvas, notes, notePositions, group);
-      }
-    }
-  }
-
-  /// Renderiza um grupo específico de notas conectadas por beams
-  void _renderBeamGroup(Canvas canvas, List<Note> notes, List<Offset> notePositions, List<int> indices) {
-    if (indices.length < 2) return;
-
-    // Calcular posições das hastes e direção dos beams
-    final stemPositions = <Offset>[];
-    final stemDirectionsUp = <bool>[];
-
-    for (final index in indices) {
-      // final note = notes[index];
-      final notePos = notePositions[index];
-
-      // Determinar direção da haste para o grupo (baseado na nota mais extrema)
-      final staffPosition = coordinates.getStaffPosition(notePos.dy);
-      final stemsUp = staffPosition >= 0; // Simplificado para o grupo
-      stemDirectionsUp.add(stemsUp);
-
-      // Calcular posição da haste
-      final noteWidth = coordinates.staffSpace * 1.18;
-      final stemX = stemsUp ? notePos.dx + (noteWidth * 0.45) : notePos.dx - (noteWidth * 0.45);
-      final stemLength = coordinates.staffSpace * 3.5;
-      final stemEndY = stemsUp ? notePos.dy - stemLength : notePos.dy + stemLength;
-
-      stemPositions.add(Offset(stemX, stemEndY));
-    }
-
-    // Determinar direção dominante do grupo
-    final upCount = stemDirectionsUp.where((up) => up).length;
-    final groupStemsUp = upCount > stemDirectionsUp.length / 2;
-
-    // Calcular inclinação do beam baseada nas posições das notas
-    final firstStem = stemPositions.first;
-    final lastStem = stemPositions.last;
-    final beamSlope = (lastStem.dy - firstStem.dy) / (lastStem.dx - firstStem.dx);
-
-    // Limitar a inclinação para parecer natural
-    final clampedSlope = beamSlope.clamp(-0.2, 0.2);
-
-    // Renderizar beams baseado na duração mínima do grupo
-    final minDuration = indices.map((i) => notes[i].duration.type.value).reduce((a, b) => a < b ? a : b);
-    final beamCount = _getBeamCount(minDuration);
-
-    for (int beamLevel = 0; beamLevel < beamCount; beamLevel++) {
-      _renderSingleBeam(canvas, stemPositions, groupStemsUp, clampedSlope, beamLevel);
-    }
-  }
-
-  /// Renderiza uma única barra (beam) entre as hastes
-  void _renderSingleBeam(Canvas canvas, List<Offset> stemPositions, bool stemsUp, double slope, int level) {
-    if (stemPositions.length < 2) return;
-
-    final beamThickness = coordinates.staffSpace * 0.5; // Espessura padrão do beam
-    final beamSpacing = coordinates.staffSpace * 0.25; // Espaçamento entre beams múltiplos
-
-    // Offset vertical baseado no nível do beam
-    final yOffset = stemsUp ? -(level * beamSpacing) : (level * beamSpacing);
-
-    final path = Path();
-
-    // Pontos da primeira haste
-    final firstStem = stemPositions.first;
-    final firstY = firstStem.dy + yOffset;
-
-    // Pontos da última haste
-    final lastStem = stemPositions.last;
-    final lastY = firstY + (slope * (lastStem.dx - firstStem.dx));
-
-    // Criar o trapézio do beam
-    if (stemsUp) {
-      // Beam acima das hastes
-      path.moveTo(firstStem.dx, firstY);
-      path.lineTo(lastStem.dx, lastY);
-      path.lineTo(lastStem.dx, lastY + beamThickness);
-      path.lineTo(firstStem.dx, firstY + beamThickness);
-    } else {
-      // Beam abaixo das hastes
-      path.moveTo(firstStem.dx, firstY);
-      path.lineTo(lastStem.dx, lastY);
-      path.lineTo(lastStem.dx, lastY - beamThickness);
-      path.lineTo(firstStem.dx, firstY - beamThickness);
-    }
-    path.close();
-
-    // Desenhar o beam
-    final beamPaint = Paint()
-      ..color = theme.stemColor
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(path, beamPaint);
-  }
-
-  /// Determina quantos beams são necessários baseado na duração
-  int _getBeamCount(double duration) {
-    if (duration >= 0.125) return 1; // Colcheia = 1 beam
-    if (duration >= 0.0625) return 2; // Semicolcheia = 2 beams
-    if (duration >= 0.03125) return 3; // Fusa = 3 beams
-    if (duration >= 0.015625) return 4; // Semifusa = 4 beams
-    if (duration >= 0.0078125) return 5; // 1/128 = 5 beams
-    return 1; // Fallback
-  }
-
-  void _renderAccidental(Canvas canvas, Note note, Offset notePosition) {
-    if (note.pitch.accidentalGlyph == null) return;
-
-    // Posicionar acidente com espaçamento adequado considerando nota centralizada
-    final noteWidth = coordinates.staffSpace * 1.18;
-    final halfNoteWidth = noteWidth * 0.5;
-    final accidentalSpacing = coordinates.staffSpace * 0.8; // Espaçamento entre acidente e nota
-    final accidentalX = notePosition.dx - halfNoteWidth - accidentalSpacing;
-
-    _drawGlyph(
-      canvas: canvas,
-      glyphName: note.pitch.accidentalGlyph!,
-      position: Offset(accidentalX, notePosition.dy),
-      size: glyphSize * 0.8,
-      color: theme.accidentalColor ?? theme.noteheadColor,
-      centerVertically: true,
-      centerHorizontally: true,
+      centerHorizontally: false,
     );
   }
 
   void _renderArticulations(
     Canvas canvas,
     Note note,
-    Offset notePosition,
+    Offset notePos,
     int staffPosition,
   ) {
     if (note.articulations.isEmpty) return;
 
-    // CORREÇÃO: Lógica independente para articulações que não interfere com hastes
-    // Usar regra musical correta para posicionamento
-    final middleLineY = coordinates.staffBaseline.dy;
+    // CORREÇÃO: Articulação independente da haste
+    final stemUp = staffPosition <= 0;
+    final articulationAbove = !stemUp; // Lado oposto à haste
 
-    // Determinar se articulações vão acima ou abaixo baseado na posição da nota
-    // Regra musical: articulações ficam do lado oposto à haste quando possível
-    final noteAboveMiddle = notePosition.dy < middleLineY;
-    final articulationAbove = !noteAboveMiddle; // Lado oposto à haste
-
-    // Calcular posição Y da articulação com espaçamento adequado
     final articulationY = articulationAbove
-        ? notePosition.dy - coordinates.staffSpace * 1.2 // Acima da nota
-        : notePosition.dy + coordinates.staffSpace * 1.2; // Abaixo da nota
+        ? notePos.dy - (coordinates.staffSpace * 0.8)
+        : notePos.dy + (coordinates.staffSpace * 0.8);
 
     for (final articulation in note.articulations) {
       final glyphName = _getArticulationGlyph(articulation, articulationAbove);
@@ -676,8 +381,8 @@ class StaffRenderer {
       _drawGlyph(
         canvas: canvas,
         glyphName: glyphName,
-        position: Offset(notePosition.dx, articulationY),
-        size: glyphSize * 0.7, // Tamanho apropriado para articulações
+        position: Offset(notePos.dx, articulationY),
+        size: glyphSize * 0.7,
         color: theme.articulationColor,
         centerVertically: true,
         centerHorizontally: true,
@@ -689,57 +394,33 @@ class StaffRenderer {
     switch (type) {
       case ArticulationType.staccato:
         return above ? 'articStaccatoAbove' : 'articStaccatoBelow';
-      case ArticulationType.staccatissimo:
-        return above ? 'articStaccatissimoAbove' : 'articStaccatissimoBelow';
       case ArticulationType.accent:
-        return above ? 'articAccentAbove' : 'articAccentBelow';
-      case ArticulationType.strongAccent:
         return above ? 'articAccentAbove' : 'articAccentBelow';
       case ArticulationType.tenuto:
         return above ? 'articTenutoAbove' : 'articTenutoBelow';
       case ArticulationType.marcato:
         return above ? 'articMarcatoAbove' : 'articMarcatoBelow';
-      case ArticulationType.legato:
-        return above ? 'articTenutoAbove' : 'articTenutoBelow';
-      case ArticulationType.portato:
-        return above ? 'articTenutoStaccatoAbove' : 'articTenutoStaccatoBelow';
-      case ArticulationType.upBow:
-        return 'stringsUpBow';
-      case ArticulationType.downBow:
-        return 'stringsDownBow';
-      case ArticulationType.harmonics:
-        return 'stringsHarmonic';
-      case ArticulationType.pizzicato:
-        return above ? 'pluckedPizzicatoAbove' : 'pluckedPizzicatoBelow';
-      case ArticulationType.snap:
-        return above ? 'pluckedSnapPizzicatoAbove' : 'pluckedSnapPizzicatoBelow';
-      case ArticulationType.thumb:
-        return above ? 'pluckedThumbPositionAbove' : 'pluckedThumbPositionBelow';
-      case ArticulationType.stopped:
-        return above ? 'brassMuteClosedAbove' : 'brassMuteClosedBelow';
-      case ArticulationType.open:
-        return above ? 'brassMuteOpenAbove' : 'brassMuteOpenBelow';
-      case ArticulationType.halfStopped:
-        return above ? 'brassMuteHalfClosedAbove' : 'brassMuteHalfClosedBelow';
+      default:
+        return 'articStaccatoAbove';
     }
   }
 
-  void _renderRest(Canvas canvas, Rest rest, Offset basePosition) {
+  void _renderRest(Canvas canvas, Rest rest, Offset position) {
     String glyphName;
     double yOffset = 0;
 
     switch (rest.duration.type) {
       case DurationType.whole:
         glyphName = 'restWhole';
-        yOffset = -coordinates.staffSpace; // Pausa de semibreve na 4ª linha
+        yOffset = -coordinates.staffSpace;
         break;
       case DurationType.half:
         glyphName = 'restHalf';
-        yOffset = -coordinates.staffSpace * 0.5; // Pausa de mínima na 3ª linha
+        yOffset = 0;
         break;
       case DurationType.quarter:
         glyphName = 'restQuarter';
-        yOffset = 0; // Pausa de semínima centrada
+        yOffset = 0;
         break;
       case DurationType.eighth:
         glyphName = 'rest8th';
@@ -749,48 +430,22 @@ class StaffRenderer {
         glyphName = 'rest16th';
         yOffset = 0;
         break;
-      case DurationType.thirtySecond:
-        glyphName = 'rest32nd';
-        yOffset = 0;
-        break;
-      case DurationType.sixtyFourth:
-        glyphName = 'rest64th';
-        yOffset = 0;
-        break;
-      case DurationType.oneHundredTwentyEighth:
-        glyphName = 'rest128th';
-        yOffset = 0;
-        break;
+      default:
+        glyphName = 'restQuarter';
     }
 
     _drawGlyph(
       canvas: canvas,
       glyphName: glyphName,
-      position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
+      position: Offset(position.dx, coordinates.staffBaseline.dy + yOffset),
       size: glyphSize,
       color: theme.restColor,
       centerVertically: true,
     );
   }
 
-  void _renderBarline(Canvas canvas, Offset basePosition) {
-    // CORREÇÃO: Usar espessura oficial SMuFL para barras de compasso
-    final paint = Paint()
-      ..color = theme.barlineColor
-      ..strokeWidth = SmuflCoordinates.getBarlineThickness(coordinates.staffSpace);
-
-    final topY = coordinates.getStaffLineY(1);
-    final bottomY = coordinates.getStaffLineY(5);
-
-    canvas.drawLine(
-      Offset(basePosition.dx, topY),
-      Offset(basePosition.dx, bottomY),
-      paint,
-    );
-  }
-
   void _renderChord(Canvas canvas, Chord chord, Offset basePosition) {
-    // Ordenar notas por altura
+    // Ordenar notas
     final sortedNotes = [...chord.notes]
       ..sort(
         (a, b) => _calculateStaffPosition(
@@ -798,27 +453,336 @@ class StaffRenderer {
         ).compareTo(_calculateStaffPosition(a.pitch)),
       );
 
-    // Renderizar cada nota do acorde com ajuste de posição horizontal
-    double xOffset = 0;
+    // Calcular posições
+    final positions = <int>[];
+    for (final note in sortedNotes) {
+      positions.add(_calculateStaffPosition(note.pitch));
+    }
+
+    // Direção da haste baseada na média
+    final avgPos = positions.reduce((a, b) => a + b) / positions.length;
+    final stemUp = avgPos <= 0;
+
+    // Renderizar notas com ajuste para segundas
     for (int i = 0; i < sortedNotes.length; i++) {
       final note = sortedNotes[i];
+      final staffPos = positions[i];
+      final noteY =
+          coordinates.staffBaseline.dy -
+          (staffPos * coordinates.staffSpace * 0.5);
 
-      // Aplicar offset para evitar sobreposição de notas
-      if (i > 0) {
-        // Verificar se as notas são adjacentes (intervalo de segunda)
-        final prevPosition = _calculateStaffPosition(sortedNotes[i-1].pitch);
-        final currPosition = _calculateStaffPosition(note.pitch);
+      double xOffset = 0;
+      if (i > 0 && (positions[i - 1] - positions[i]).abs() == 1) {
+        xOffset = stemUp
+            ? (i % 2 == 1 ? -coordinates.staffSpace * 0.8 : 0)
+            : (i % 2 == 1 ? coordinates.staffSpace * 0.8 : 0);
+      }
 
-        if ((prevPosition - currPosition).abs() == 1) {
-          // Notas adjacentes: aplicar offset baseado no bounding box real
-          final noteheadBBox = metadata.getGlyphBoundingBox('noteheadBlack');
-          final noteWidth = noteheadBBox?.widthInPixels(coordinates.staffSpace) ??
-                           (coordinates.staffSpace * 1.18);
-          xOffset = (i % 2 == 1) ? noteWidth * 0.6 : 0; // 60% da largura para evitar sobreposição
+      _drawGlyph(
+        canvas: canvas,
+        glyphName: note.duration.type.glyphName,
+        position: Offset(basePosition.dx + xOffset, noteY),
+        size: glyphSize,
+        color: theme.noteheadColor,
+        centerVertically: true,
+        centerHorizontally: true,
+      );
+    }
+
+    // Renderizar haste única
+    if (chord.duration.type != DurationType.whole) {
+      final extremePos = stemUp ? positions.last : positions.first;
+      final extremeY =
+          coordinates.staffBaseline.dy -
+          (extremePos * coordinates.staffSpace * 0.5);
+
+      // <<--- MUDANÇA AQUI: Lógica granular para o tamanho da haste
+      double stemFactor;
+      final noteCount = chord.notes.length;
+
+      if (noteCount >= 5) {
+        stemFactor = 6.5; // Para acordes com 5 ou mais notas
+      } else if (noteCount == 4) {
+        stemFactor = 5.5; // Para acordes com 4 notas
+      } else if (noteCount == 3) {
+        stemFactor = 4.5; // Para acordes com 3 notas
+      } else {
+        stemFactor = 3.5; // Padrão para 1 ou 2 notas
+      }
+
+      _renderStem(
+        canvas,
+        Offset(basePosition.dx, extremeY),
+        extremePos,
+        chord.duration.type,
+        customStemFactor: stemFactor,
+      );
+    }
+  }
+
+  void _renderBarline(Canvas canvas, Offset position) {
+    final paint = Paint()
+      ..color = theme.barlineColor
+      ..strokeWidth = metadata.getEngravingDefault('thinBarlineThickness');
+
+    canvas.drawLine(
+      Offset(position.dx, coordinates.getStaffLineY(1)),
+      Offset(position.dx, coordinates.getStaffLineY(5)),
+      paint,
+    );
+  }
+
+  void _drawLedgerLines(Canvas canvas, double x, int staffPosition) {
+    if (!theme.showLedgerLines) return;
+
+    final paint = Paint()
+      ..color = theme.staffLineColor
+      ..strokeWidth = metadata.getEngravingDefault('legerLineThickness') * 4.0;
+
+    final extension =
+        metadata.getEngravingDefault('legerLineExtension') *
+        coordinates.staffSpace;
+    final noteWidth = coordinates.staffSpace * 1.18;
+    final totalWidth = noteWidth + (2 * extension);
+
+    // Linhas superiores
+    if (staffPosition < -4) {
+      for (int pos = -6; pos >= staffPosition; pos -= 2) {
+        final y =
+            coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
+        canvas.drawLine(
+          Offset(x - totalWidth / 2, y),
+          Offset(x + totalWidth / 2, y),
+          paint,
+        );
+      }
+    }
+
+    // Linhas inferiores
+    if (staffPosition > 4) {
+      for (int pos = 6; pos <= staffPosition; pos += 2) {
+        final y =
+            coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
+        canvas.drawLine(
+          Offset(x - totalWidth / 2, y),
+          Offset(x + totalWidth / 2, y),
+          paint,
+        );
+      }
+    }
+  }
+
+  void _renderAugmentationDots(
+    Canvas canvas,
+    Note note,
+    Offset notePos,
+    int staffPosition,
+  ) {
+    final dotX = notePos.dx + (coordinates.staffSpace * 1.2);
+
+    double dotY = notePos.dy;
+    if (staffPosition % 2 == 0) {
+      // Em linha
+      dotY -= coordinates.staffSpace * 0.25;
+    }
+
+    for (int i = 0; i < note.duration.dots; i++) {
+      final currentDotX = dotX + (i * coordinates.staffSpace * 0.4);
+
+      _drawGlyph(
+        canvas: canvas,
+        glyphName: 'augmentationDot',
+        position: Offset(currentDotX, dotY),
+        size: coordinates.staffSpace * 3,
+        color: theme.noteheadColor,
+        centerVertically: true,
+        centerHorizontally: true,
+      );
+    }
+  }
+
+  void _renderAccidental(Canvas canvas, Note note, Offset notePos) {
+    final accidentalX = notePos.dx - (coordinates.staffSpace * 1.5);
+
+    _drawGlyph(
+      canvas: canvas,
+      glyphName: note.pitch.accidentalGlyph!,
+      position: Offset(accidentalX, notePos.dy),
+      size: glyphSize,
+      color: theme.accidentalColor ?? theme.noteheadColor,
+      centerVertically: true,
+      centerHorizontally: true,
+    );
+  }
+
+  // CORREÇÃO: Processamento de beams
+  Map<int, List<int>> _identifyBeamGroups(List<PositionedElement> elements) {
+    final groups = <int, List<int>>{};
+    int groupId = 0;
+
+    for (int i = 0; i < elements.length; i++) {
+      final element = elements[i].element;
+
+      if (element is Note && element.beam == BeamType.start) {
+        final group = <int>[i];
+
+        for (int j = i + 1; j < elements.length; j++) {
+          final nextElement = elements[j].element;
+          if (nextElement is Note) {
+            group.add(j);
+            if (nextElement.beam == BeamType.end) break;
+          } else {
+            break;
+          }
+        }
+
+        if (group.length >= 2) {
+          groups[groupId++] = group;
+        }
+      }
+    }
+
+    return groups;
+  }
+
+  void _renderBeamGroups(
+    Canvas canvas,
+    Map<int, List<int>> groups,
+    List<PositionedElement> elements,
+  ) {
+    for (final group in groups.values) {
+      if (group.length < 2) continue;
+
+      final positions = <Offset>[];
+      final staffPositions = <int>[];
+
+      for (final index in group) {
+        final element = elements[index];
+        if (element.element is Note) {
+          final note = element.element as Note;
+          final staffPos = _calculateStaffPosition(note.pitch);
+          final noteY =
+              coordinates.staffBaseline.dy -
+              (staffPos * coordinates.staffSpace * 0.5);
+
+          positions.add(Offset(element.position.dx, noteY));
+          staffPositions.add(staffPos);
         }
       }
 
-      _renderNote(canvas, note, Offset(basePosition.dx + xOffset, basePosition.dy));
+      // Calcular direção
+      final avgPos =
+          staffPositions.reduce((a, b) => a + b) / staffPositions.length;
+      final stemUp = avgPos <= 0;
+
+      _renderBeamGroup(canvas, positions, staffPositions, stemUp);
+    }
+  }
+
+  void _renderBeamGroup(
+    Canvas canvas,
+    List<Offset> positions,
+    List<int> staffPositions,
+    bool stemUp,
+  ) {
+    if (positions.length < 2) return;
+
+    final stemHeight = coordinates.staffSpace * 3.5;
+    final beamThickness =
+        metadata.getEngravingDefault('beamThickness') * coordinates.staffSpace;
+
+    // Calcular endpoints das hastes
+    final stemEndpoints = <Offset>[];
+    for (int i = 0; i < positions.length; i++) {
+      final noteWidth = coordinates.staffSpace * 1.18;
+      final stemX = stemUp
+          ? positions[i].dx + (noteWidth * 0.45)
+          : positions[i].dx - (noteWidth * 0.45);
+
+      final stemEndY = stemUp
+          ? positions[i].dy - stemHeight
+          : positions[i].dy + stemHeight;
+
+      stemEndpoints.add(Offset(stemX, stemEndY));
+    }
+
+    // Calcular inclinação
+    final slope =
+        (stemEndpoints.last.dy - stemEndpoints.first.dy) /
+        (stemEndpoints.last.dx - stemEndpoints.first.dx);
+    final clampedSlope = slope.clamp(-0.15, 0.15);
+
+    // Desenhar hastes
+    final stemPaint = Paint()
+      ..color = theme.stemColor
+      ..strokeWidth = stemThickness;
+
+    for (int i = 0; i < positions.length; i++) {
+      final stemX = stemEndpoints[i].dx;
+      final beamY =
+          stemEndpoints.first.dy +
+          (clampedSlope * (stemX - stemEndpoints.first.dx));
+
+      canvas.drawLine(
+        Offset(stemX, positions[i].dy),
+        Offset(stemX, beamY),
+        stemPaint,
+      );
+    }
+
+    // Desenhar beam
+    final beamPaint = Paint()
+      ..color = theme.beamColor ?? theme.stemColor
+      ..style = PaintingStyle.fill;
+
+    final firstY = stemEndpoints.first.dy;
+    final lastY =
+        firstY +
+        (clampedSlope * (stemEndpoints.last.dx - stemEndpoints.first.dx));
+
+    final path = Path()
+      ..moveTo(stemEndpoints.first.dx, firstY)
+      ..lineTo(stemEndpoints.last.dx, lastY)
+      ..lineTo(stemEndpoints.last.dx, lastY + beamThickness)
+      ..lineTo(stemEndpoints.first.dx, firstY + beamThickness)
+      ..close();
+
+    canvas.drawPath(path, beamPaint);
+  }
+
+  int _calculateStaffPosition(Pitch pitch) {
+    if (currentClef == null) return 0;
+
+    const stepToDiatonic = {
+      'C': 0,
+      'D': 1,
+      'E': 2,
+      'F': 3,
+      'G': 4,
+      'A': 5,
+      'B': 6,
+    };
+
+    final pitchStep = stepToDiatonic[pitch.step] ?? 0;
+
+    switch (currentClef!.actualClefType) {
+      case ClefType.treble:
+        const refStep = 6; // B
+        const refOctave = 4;
+        return (pitchStep - refStep) + ((pitch.octave - refOctave) * 7);
+
+      case ClefType.bass:
+        const refStep = 1; // D
+        const refOctave = 3;
+        return (pitchStep - refStep) + ((pitch.octave - refOctave) * 7);
+
+      case ClefType.alto:
+        const refStep = 0; // C
+        const refOctave = 4;
+        return (pitchStep - refStep) + ((pitch.octave - refOctave) * 7);
+
+      default:
+        return 0;
     }
   }
 
@@ -849,283 +813,12 @@ class StaffRenderer {
 
     textPainter.layout();
 
-    // Centralização vertical
-    double yOffset = 0;
-    if (centerVertically) {
-      yOffset = -textPainter.height * 0.5;
-    }
+    double yOffset = centerVertically ? -textPainter.height * 0.5 : 0;
+    double xOffset = centerHorizontally ? -textPainter.width * 0.5 : 0;
 
-    // Centralização horizontal melhorada para notas
-    double xOffset = 0;
-    if (centerHorizontally) {
-      // Para notas, usar metade da largura do glifo para centralizar
-      xOffset = -textPainter.width * 0.5;
-    }
-
-    textPainter.paint(canvas, Offset(position.dx + xOffset, position.dy + yOffset));
-  }
-
-  /// Renderiza ornamentos de uma nota
-  void _renderOrnaments(Canvas canvas, Note note, Offset basePosition) {
-    if (note.ornaments.isEmpty) return;
-
-    for (final ornament in note.ornaments) {
-      _renderOrnament(canvas, ornament, basePosition);
-    }
-  }
-
-  /// Renderiza um único ornamento
-  void _renderOrnament(Canvas canvas, dynamic ornament, Offset basePosition) {
-    if (ornament == null) return;
-
-    // Verificar se é um Ornament válido via duck typing
-    try {
-      final type = ornament.type;
-      final above = ornament.above ?? true;
-
-      String? glyphName = _getOrnamentGlyph(type);
-      if (glyphName == null) return;
-
-      // Posição do ornamento baseada em metadados SMuFL
-      final ornamentY = above
-          ? basePosition.dy - (coordinates.staffSpace * 3.0)
-          : basePosition.dy + (coordinates.staffSpace * 3.0);
-
-      _drawGlyph(
-        canvas: canvas,
-        glyphName: glyphName,
-        position: Offset(basePosition.dx, ornamentY),
-        size: coordinates.staffSpace * 3.0,
-        color: theme.ornamentColor ?? theme.noteheadColor,
-        centerVertically: true,
-        centerHorizontally: true,
-      );
-    } catch (e) {
-      // Ignorar ornamentos inválidos
-    }
-  }
-
-  /// Renderiza dinâmica de uma nota
-  void _renderDynamic(Canvas canvas, Note note, Offset basePosition) {
-    final dynamic = note.dynamicElement;
-    if (dynamic == null) return;
-
-    try {
-      final type = dynamic.type;
-
-      if (dynamic.isHairpin == true) {
-        _renderHairpin(canvas, dynamic, basePosition);
-      } else {
-        String? glyphName = _getDynamicGlyph(type);
-        if (glyphName != null) {
-          // Dinâmicas sempre ficam abaixo da pauta
-          final dynamicY = basePosition.dy + (coordinates.staffSpace * 4.0);
-
-          _drawGlyph(
-            canvas: canvas,
-            glyphName: glyphName,
-            position: Offset(basePosition.dx, dynamicY),
-            size: coordinates.staffSpace * 2.5,
-            color: theme.dynamicColor ?? theme.noteheadColor,
-            centerVertically: true,
-            centerHorizontally: true,
-          );
-        }
-      }
-    } catch (e) {
-      // Ignorar dinâmicas inválidas
-    }
-  }
-
-  /// Renderiza hairpins (crescendo/diminuendo)
-  void _renderHairpin(Canvas canvas, dynamic dynamic, Offset basePosition) {
-    // Implementação básica de hairpin
-    final length = coordinates.staffSpace * 4.0;
-    final height = coordinates.staffSpace * 0.5;
-    final y = basePosition.dy + (coordinates.staffSpace * 4.0);
-
-    final paint = Paint()
-      ..color = theme.dynamicColor ?? theme.noteheadColor
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-
-    try {
-      final type = dynamic.type.toString();
-      if (type.contains('crescendo')) {
-        // Crescendo: linha que se abre
-        path.moveTo(basePosition.dx, y - height / 2);
-        path.lineTo(basePosition.dx + length, y - height);
-        path.moveTo(basePosition.dx, y + height / 2);
-        path.lineTo(basePosition.dx + length, y + height);
-      } else if (type.contains('diminuendo')) {
-        // Diminuendo: linha que se fecha
-        path.moveTo(basePosition.dx, y - height);
-        path.lineTo(basePosition.dx + length, y - height / 2);
-        path.moveTo(basePosition.dx, y + height);
-        path.lineTo(basePosition.dx + length, y + height / 2);
-      }
-
-      canvas.drawPath(path, paint);
-    } catch (e) {
-      // Ignorar hairpins inválidos
-    }
-  }
-
-  /// Mapeia tipos de ornamentos para glifos SMuFL
-  String? _getOrnamentGlyph(dynamic type) {
-    final typeStr = type.toString();
-
-    const ornamentGlyphs = {
-      'OrnamentType.trill': 'ornamentTrill',
-      'OrnamentType.trillFlat': 'ornamentTrillFlat',
-      'OrnamentType.trillNatural': 'ornamentTrillNatural',
-      'OrnamentType.trillSharp': 'ornamentTrillSharp',
-      'OrnamentType.mordent': 'ornamentMordent',
-      'OrnamentType.invertedMordent': 'ornamentMordentInverted',
-      'OrnamentType.shortTrill': 'ornamentShortTrill',
-      'OrnamentType.turn': 'ornamentTurn',
-      'OrnamentType.invertedTurn': 'ornamentTurnInverted',
-      'OrnamentType.turnSlash': 'ornamentTurnSlash',
-      'OrnamentType.fermata': 'fermataAbove',
-      'OrnamentType.fermataBelow': 'fermataBelow',
-      'OrnamentType.acciaccatura': 'ornamentAppoggiaturaDown',
-      'OrnamentType.glissando': 'glissandoUp',
-      'OrnamentType.arpeggio': 'arpeggiato',
-    };
-
-    return ornamentGlyphs[typeStr];
-  }
-
-  /// Mapeia tipos de dinâmica para glifos SMuFL
-  String? _getDynamicGlyph(dynamic type) {
-    final typeStr = type.toString();
-
-    const dynamicGlyphs = {
-      'DynamicType.piano': 'dynamicPiano',
-      'DynamicType.forte': 'dynamicForte',
-      'DynamicType.mezzoForte': 'dynamicMF',
-      'DynamicType.mezzoPiano': 'dynamicMP',
-      'DynamicType.fortissimo': 'dynamicFF',
-      'DynamicType.pianissimo': 'dynamicPP',
-      'DynamicType.fortississimo': 'dynamicFFF',
-      'DynamicType.pianississimo': 'dynamicPPP',
-      'DynamicType.sforzando': 'dynamicSforzando1',
-      'DynamicType.p': 'dynamicPiano',
-      'DynamicType.f': 'dynamicForte',
-      'DynamicType.mp': 'dynamicMP',
-      'DynamicType.mf': 'dynamicMF',
-      'DynamicType.pp': 'dynamicPP',
-      'DynamicType.ff': 'dynamicFF',
-      'DynamicType.ppp': 'dynamicPPP',
-      'DynamicType.fff': 'dynamicFFF',
-    };
-
-    return dynamicGlyphs[typeStr];
-  }
-
-  /// Renderiza pontos de aumento
-  void _renderAugmentationDots(Canvas canvas, Note note, Offset basePosition, int staffPosition) {
-    if (note.duration.dots == 0) return;
-
-    // Posição horizontal: à direita da cabeça da nota
-    final dotX = basePosition.dx + (coordinates.staffSpace * 0.8);
-
-    // Posição vertical: sempre em espaços (não em linhas)
-    double dotY = basePosition.dy;
-
-    // Se a nota está numa linha, mover o ponto para o espaço acima
-    if (staffPosition % 2 == 0) {
-      dotY -= coordinates.staffSpace * 0.25;
-    }
-
-    // Desenhar cada ponto
-    for (int i = 0; i < note.duration.dots; i++) {
-      final currentDotX = dotX + (i * coordinates.staffSpace * 0.4);
-
-      _drawGlyph(
-        canvas: canvas,
-        glyphName: 'augmentationDot',
-        position: Offset(currentDotX, dotY),
-        size: coordinates.staffSpace * 2.0,
-        color: theme.noteheadColor,
-        centerVertically: true,
-        centerHorizontally: true,
-      );
-    }
-  }
-
-  /// Renderiza tuplet (quiáltera)
-  void _renderTuplet(Canvas canvas, dynamic tuplet, Offset basePosition) {
-    try {
-      final actualNotes = tuplet.actualNotes ?? 3;
-      final showBracket = tuplet.showBracket ?? true;
-      final showNumber = tuplet.showNumber ?? true;
-
-      if (!showBracket && !showNumber) return;
-
-      // Assumir largura baseada no número de notas
-      final tupletWidth = coordinates.staffSpace * actualNotes * 1.5;
-      final bracketY = basePosition.dy - (coordinates.staffSpace * 2.5);
-
-      // Desenhar colchete se solicitado
-      if (showBracket) {
-        final paint = Paint()
-          ..color = theme.tupletColor ?? theme.noteheadColor
-          ..strokeWidth = 1.0
-          ..style = PaintingStyle.stroke;
-
-        final path = Path();
-
-        // Linha horizontal
-        path.moveTo(basePosition.dx, bracketY);
-        path.lineTo(basePosition.dx + tupletWidth, bracketY);
-
-        // Linhas verticais nas extremidades
-        path.moveTo(basePosition.dx, bracketY);
-        path.lineTo(basePosition.dx, bracketY - (coordinates.staffSpace * 0.3));
-
-        path.moveTo(basePosition.dx + tupletWidth, bracketY);
-        path.lineTo(basePosition.dx + tupletWidth, bracketY - (coordinates.staffSpace * 0.3));
-
-        canvas.drawPath(path, paint);
-      }
-
-      // Desenhar número se solicitado
-      if (showNumber) {
-        final centerX = basePosition.dx + (tupletWidth / 2);
-        final text = '$actualNotes';
-
-        _drawText(
-          canvas,
-          text,
-          Offset(centerX, bracketY - (coordinates.staffSpace * 0.5)),
-          theme.tupletTextStyle ?? TextStyle(
-            color: theme.tupletColor ?? theme.noteheadColor,
-            fontSize: coordinates.staffSpace * 0.8,
-            fontWeight: FontWeight.bold,
-          ),
-        );
-      }
-    } catch (e) {
-      // Ignorar tuplets inválidos
-    }
-  }
-
-  /// Desenha texto simples
-  void _drawText(Canvas canvas, String text, Offset position, TextStyle style) {
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
+    textPainter.paint(
+      canvas,
+      Offset(position.dx + xOffset, position.dy + yOffset),
     );
-    textPainter.layout();
-
-    final offset = Offset(
-      position.dx - textPainter.width / 2,
-      position.dy - textPainter.height / 2,
-    );
-
-    textPainter.paint(canvas, offset);
   }
 }

@@ -282,16 +282,18 @@ class SmuflAdvancedCoordinates {
   final double staffSpace;
   final SmuflMetadata metadata;
 
-  SmuflAdvancedCoordinates({
-    required this.staffSpace,
-    required this.metadata,
-  });
+  SmuflAdvancedCoordinates({required this.staffSpace, required this.metadata});
 
   /// Retorna a posição Y para ornamentos baseado em âncoras SMuFL
-  double getOrnamentY(String noteGlyph, String ornamentGlyph, double baseY, bool above) {
+  double getOrnamentY(
+    String noteGlyph,
+    String ornamentGlyph,
+    double baseY,
+    bool above,
+  ) {
     // Usar anchors do metadata para posicionamento preciso
     final anchors = metadata.getGlyphAnchors(noteGlyph);
-    
+
     if (above) {
       // Posição acima da nota usando âncora "above" se disponível
       if (anchors != null) {
@@ -319,22 +321,27 @@ class SmuflAdvancedCoordinates {
   double getDynamicY(String noteGlyph, double baseY) {
     // Dinâmicas sempre ficam abaixo da pauta
     final anchors = metadata.getGlyphAnchors(noteGlyph);
-    
+
     if (anchors != null) {
       final anchor = anchors.getAnchor('below');
       if (anchor != null) {
         return baseY + (anchor.dy * staffSpace) + (staffSpace * 3.0);
       }
     }
-    
+
     // Posição padrão para dinâmicas (abaixo da pauta)
     return baseY + (staffSpace * 4.0);
   }
 
   /// Retorna a posição para articulações baseado em âncoras SMuFL
-  double getArticulationY(String noteGlyph, String articulationGlyph, double baseY, bool above) {
+  double getArticulationY(
+    String noteGlyph,
+    String articulationGlyph,
+    double baseY,
+    bool above,
+  ) {
     final anchors = metadata.getGlyphAnchors(noteGlyph);
-    
+
     if (above) {
       if (anchors != null) {
         final anchor = anchors.getAnchor('above');
@@ -371,24 +378,30 @@ class SmuflAdvancedCoordinates {
   }
 
   /// Calcula posições para beam groups seguindo regras musicais
-  List<double> calculateBeamPositions(List<double> notePositionsY, bool stemUp) {
+  List<double> calculateBeamPositions(
+    List<double> notePositionsY,
+    bool stemUp,
+  ) {
     if (notePositionsY.isEmpty) return [];
-    
+
     // Calcular inclinação baseada na diferença de altura
     final firstY = notePositionsY.first;
     final lastY = notePositionsY.last;
-    final slope = stemUp ? 
-        (lastY - firstY) * 0.3 : // Beam sobe suavemente
-        (lastY - firstY) * 0.3;  // Beam desce suavemente
-    
+    final slope = stemUp
+        ? (lastY - firstY) * 0.3
+        : // Beam sobe suavemente
+          (lastY - firstY) * 0.3; // Beam desce suavemente
+
     // Gerar posições interpoladas
     final positions = <double>[];
     for (int i = 0; i < notePositionsY.length; i++) {
-      final ratio = notePositionsY.length > 1 ? i / (notePositionsY.length - 1) : 0.0;
+      final ratio = notePositionsY.length > 1
+          ? i / (notePositionsY.length - 1)
+          : 0.0;
       final beamY = firstY + (slope * ratio);
       positions.add(beamY);
     }
-    
+
     return positions;
   }
 }
@@ -398,13 +411,14 @@ class SmuflGlyphPositioner {
   final SmuflMetadata metadata;
   final double staffSpace;
 
-  SmuflGlyphPositioner({
-    required this.metadata,
-    required this.staffSpace,
-  });
+  SmuflGlyphPositioner({required this.metadata, required this.staffSpace});
 
   /// Calcula a posição precisa de uma haste usando anchors SMuFL
-  Offset getStemPosition(String noteheadGlyph, bool stemUp, Offset notePosition) {
+  Offset getStemPosition(
+    String noteheadGlyph,
+    bool stemUp,
+    Offset notePosition,
+  ) {
     final anchors = metadata.getGlyphAnchors(noteheadGlyph);
     if (anchors == null) {
       // Fallback para posicionamento tradicional se não há anchors
@@ -442,7 +456,11 @@ class SmuflGlyphPositioner {
   }
 
   /// Calcula a posição de um acidente usando anchors SMuFL
-  Offset getAccidentalPosition(String noteheadGlyph, String accidentalGlyph, Offset notePosition) {
+  Offset getAccidentalPosition(
+    String noteheadGlyph,
+    String accidentalGlyph,
+    Offset notePosition,
+  ) {
     // final noteAnchors = metadata.getGlyphAnchors(noteheadGlyph);
     final accidentalBBox = metadata.getGlyphBoundingBox(accidentalGlyph);
 
@@ -463,8 +481,12 @@ class SmuflGlyphPositioner {
   }
 
   /// Calcula a posição de ornamentos usando anchors SMuFL
-  Offset getOrnamentPosition(String noteheadGlyph, String ornamentGlyph,
-                           Offset notePosition, bool above) {
+  Offset getOrnamentPosition(
+    String noteheadGlyph,
+    String ornamentGlyph,
+    Offset notePosition,
+    bool above,
+  ) {
     final noteAnchors = metadata.getGlyphAnchors(noteheadGlyph);
 
     if (noteAnchors != null) {
@@ -486,8 +508,12 @@ class SmuflGlyphPositioner {
   }
 
   /// Calcula a posição de articulações usando anchors SMuFL
-  Offset getArticulationPosition(String noteheadGlyph, String articulationGlyph,
-                                Offset notePosition, bool above) {
+  Offset getArticulationPosition(
+    String noteheadGlyph,
+    String articulationGlyph,
+    Offset notePosition,
+    bool above,
+  ) {
     final noteAnchors = metadata.getGlyphAnchors(noteheadGlyph);
 
     if (noteAnchors != null) {
@@ -527,12 +553,15 @@ class SmuflGlyphPositioner {
     // Se não há center óptico, usar o centro geométrico
     final boundingBox = metadata.getGlyphBoundingBox(glyphName);
     if (boundingBox != null) {
-      final centerX = SmuflCoordinates.smuflToPixels(boundingBox.centerX, staffSpace);
-      final centerY = SmuflCoordinates.smuflToPixels(boundingBox.centerY, staffSpace);
-      return Offset(
-        basePosition.dx + centerX,
-        basePosition.dy + centerY,
+      final centerX = SmuflCoordinates.smuflToPixels(
+        boundingBox.centerX,
+        staffSpace,
       );
+      final centerY = SmuflCoordinates.smuflToPixels(
+        boundingBox.centerY,
+        staffSpace,
+      );
+      return Offset(basePosition.dx + centerX, basePosition.dy + centerY);
     }
 
     return basePosition;
@@ -556,4 +585,4 @@ extension OffsetSmuflExtension on Offset {
       SmuflCoordinates.pixelsToSmufl(dy, staffSpace),
     );
   }
-}
+}
