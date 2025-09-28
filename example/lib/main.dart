@@ -3,123 +3,99 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smufl_renderer/smufl_renderer.dart';
-import 'examples/basic_example.dart';
-import 'examples/advanced_example.dart';
-import 'examples/complex_example.dart';
-import 'examples/performance_example.dart';
-import 'examples/microtonal_example.dart';
-import 'examples/percussion_example.dart';
-import 'examples/contemporary_example.dart';
-import 'examples/jazz_example.dart';
-import 'examples/precision_test_example.dart';
-import 'examples/debug_visual_example.dart';
-import 'examples/simple_debug_example.dart';
-import 'examples/advanced_features_example.dart';
-import 'examples/complete_notation_example.dart';
-import 'examples/comprehensive_symbols_example.dart';
-import 'examples/beams_and_tuplets_example.dart';
 
-// 2. A função main agora é assíncrona para esperar o carregamento da fonte
+import 'examples/clefs_example.dart';
+import 'examples/key_signatures_example.dart';
+import 'examples/rhythmic_figures_example.dart';
+import 'examples/accidentals_example.dart';
+import 'examples/articulations_example.dart';
+import 'examples/dots_and_ledgers_example.dart';
+import 'examples/chords_example.dart';
+import 'examples/beams_example.dart';
+
 Future<void> main() async {
-  // 3. Garantir que o Flutter está inicializado antes de carregar a fonte
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 4. Carregar a fonte Bravura programaticamente
   final fontLoader = FontLoader('Bravura');
-  // O caminho usa 'packages/smufl_renderer' porque a app de exemplo
-  // está a aceder a um recurso da biblioteca.
   fontLoader.addFont(
       rootBundle.load('packages/smufl_renderer/assets/smufl/Bravura.otf'));
   await fontLoader.load();
 
-  // 5. Carregar os metadados da fonte SMuFL
   await SmuflMetadata().load();
 
-  // 6. Correr a aplicação APENAS DEPOIS de a fonte e metadados estarem carregados
-  runApp(const MyApp());
+  runApp(const MusicNotationApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MusicNotationApp extends StatelessWidget {
+  const MusicNotationApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SMuFL Renderer - Examples',
+      debugShowCheckedModeBanner: false,
+      title: 'SMuFL Renderer Exemplos',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: true,
       ),
-      home: const ExampleHomePage(),
+      home: const MainScreen(),
     );
   }
 }
 
-class ExampleHomePage extends StatefulWidget {
-  const ExampleHomePage({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
-  State<ExampleHomePage> createState() => _ExampleHomePageState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _ExampleHomePageState extends State<ExampleHomePage> {
+class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _examples = [
-    const BasicExample(),
-    const CompleteNotationExample(),
-    const ComprehensiveSymbolsExample(),
-    const BeamsAndTupletsExample(),
-    const AdvancedExample(),
-    const ComplexExample(),
-    const AdvancedFeaturesExample(),
-    const MicrotonalExample(),
-    const PercussionExample(),
-    const ContemporaryExample(),
-    const JazzExample(),
-    const PerformanceExample(),
-    const PrecisionTestExample(),
-    const DebugVisualExample(),
-    const SimpleDebugExample(),
+  final List<String> _titles = [
+    'Claves',
+    'Armaduras de Clave',
+    'Figuras Rítmicas',
+    'Acidentes',
+    'Articulações',
+    'Pontos e Linhas Suplementares',
+    'Acordes',
+    'Barras de Ligação (Beams)',
   ];
 
-  final List<String> _titles = [
-    'Exemplo Básico',
-    'Notação Completa ⭐',
-    'Símbolos Abrangentes',
-    'Beams e Quiálteras ⭐',
-    'Exemplo Avançado',
-    'Exemplo Complexo',
-    'Funcionalidades Avançadas',
-    'Microtonal',
-    'Percussão',
-    'Contemporâneo',
-    'Jazz',
-    'Performance',
-    'Teste de Precisão',
-    'Debug Visual',
-    'Debug Simples',
+  final List<Widget> _pages = const [
+    ClefsExample(),
+    KeySignaturesExample(),
+    RhythmicFiguresExample(),
+    AccidentalsExample(),
+    ArticulationsExample(),
+    DotsAndLedgersExample(),
+    ChordsExample(),
+    BeamsExample(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // MUDANÇA AQUI: Adicionada a AppBar
       appBar: AppBar(
-        title: Text(_titles[_selectedIndex]),
-        backgroundColor: Colors.blue[800],
-        elevation: 4,
+        title: Text(_titles[_selectedIndex]), // O título muda com a seleção
+        backgroundColor: Colors.blue.shade800,
+        foregroundColor: Colors.white,
       ),
-      body: _examples[_selectedIndex],
+      body: _pages[_selectedIndex],
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: Colors.blue[800],
+                color: Colors.blue.shade800,
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'SMuFL Renderer',
@@ -129,12 +105,12 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   Text(
-                    'Exemplos e Testes',
+                    'Exemplos por Família de Símbolos',
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -160,18 +136,24 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   Icon _getIconForIndex(int index) {
     switch (index) {
-      case 0: return const Icon(Icons.music_note);
-      case 1: return const Icon(Icons.star);
-      case 2: return const Icon(Icons.auto_awesome);
-      case 3: return const Icon(Icons.tune);
-      case 4: return const Icon(Icons.sports_baseball);
-      case 5: return const Icon(Icons.art_track);
-      case 6: return const Icon(Icons.piano);
-      case 7: return const Icon(Icons.speed);
-      case 8: return const Icon(Icons.precision_manufacturing);
-      case 9: return const Icon(Icons.bug_report);
-      case 10: return const Icon(Icons.visibility);
-      default: return const Icon(Icons.circle);
+      case 0:
+        return const Icon(Icons.vpn_key_outlined);
+      case 1:
+        return const Icon(Icons.tag);
+      case 2:
+        return const Icon(Icons.hourglass_empty);
+      case 3:
+        return const Icon(Icons.superscript_outlined);
+      case 4:
+        return const Icon(Icons.arrow_drop_down_circle_outlined);
+      case 5:
+        return const Icon(Icons.more_horiz);
+      case 6:
+        return const Icon(Icons.view_module_outlined);
+      case 7:
+        return const Icon(Icons.link);
+      default:
+        return const Icon(Icons.music_note);
     }
   }
 }
