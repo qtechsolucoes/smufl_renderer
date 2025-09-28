@@ -1,8 +1,8 @@
 // lib/src/layout/layout_engine.dart
 
-import 'dart:collection';
 import 'package:flutter/material.dart';
 import '../music_model/musical_element.dart';
+import 'beam_grouper.dart';
 
 /// Uma classe para guardar um elemento e sua posição calculada.
 class PositionedElement {
@@ -119,9 +119,11 @@ class LayoutEngine {
     return positionedElements;
   }
 
-  /// Calcula a largura necessária para um compasso
+  /// Calcula a largura necessária para um compasso de forma inteligente
   double _calculateMeasureWidth(Measure measure, bool isFirstInSystem) {
-    double width = 0;
+    double baseWidth = 0;
+    int noteCount = 0;
+    double totalDurationValue = 0;
 
     // Processar elementos considerando se é o primeiro compasso
     for (int i = 0; i < measure.elements.length; i++) {
@@ -132,15 +134,74 @@ class LayoutEngine {
         continue;
       }
 
-      width += _getElementWidth(element);
+      baseWidth += _getElementWidth(element);
+
+      // Contar elementos musicais para análise de densidade
+      if (element is Note) {
+        noteCount++;
+        totalDurationValue += element.duration.realValue;
+      } else if (element is Chord) {
+        noteCount++;
+        totalDurationValue += element.duration.realValue;
+      } else if (element is Rest) {
+        noteCount++;
+        totalDurationValue += element.duration.realValue;
+      }
     }
 
-    // Adicionar padding mínimo
-    if (width < staffSpace * 4) {
-      width = staffSpace * 4;
+    // Sistema inteligente de espaçamento baseado na densidade
+    double intelligentWidth = _calculateIntelligentSpacing(
+      baseWidth,
+      noteCount,
+      totalDurationValue,
+      isFirstInSystem,
+    );
+
+    return intelligentWidth;
+  }
+
+  /// Calcula espaçamento inteligente baseado na densidade musical
+  double _calculateIntelligentSpacing(
+    double baseWidth,
+    int noteCount,
+    double totalDurationValue,
+    bool isFirstInSystem,
+  ) {
+    // Largura mínima base - considerar espaçamentos inicial e final
+    double minWidth = isFirstInSystem
+        ? staffSpace * 8   // Primeiro compasso: clave + armadura + tempo + espaço
+        : staffSpace * 4.5; // Compassos subsequentes: espaço inicial + conteúdo + espaço final
+
+    // Fator de densidade: mais notas = mais espaço necessário
+    double densityFactor = 1.0;
+    if (noteCount > 0) {
+      // Calcular densidade média (durações menores = maior densidade)
+      double averageDuration = totalDurationValue / noteCount;
+
+      // Fator baseado na duração média das notas
+      if (averageDuration <= 0.25) { // Semicolcheias e menores
+        densityFactor = 1.8;
+      } else if (averageDuration <= 0.5) { // Colcheias
+        densityFactor = 1.5;
+      } else if (averageDuration <= 1.0) { // Semínimas
+        densityFactor = 1.2;
+      } else { // Mínimas e maiores
+        densityFactor = 1.0;
+      }
+
+      // Ajuste adicional para quantidade de elementos
+      if (noteCount > 8) {
+        densityFactor *= 1.3;
+      } else if (noteCount > 4) {
+        densityFactor *= 1.15;
+      }
     }
 
-    return width;
+    // Aplicar fator de densidade à largura base
+    double adjustedWidth = baseWidth * densityFactor;
+
+    // Garantir largura mínima para legibilidade
+    return adjustedWidth < minWidth ? minWidth : adjustedWidth;
   }
 
   /// Verifica se é um elemento de sistema (clave, armadura, fórmula)
@@ -155,14 +216,28 @@ class LayoutEngine {
     if (element is Clef) {
       // Usar largura correta baseada no tipo de clave
       double clefWidth;
-      switch (element.type) {
-        case 'g':
+      switch (element.actualClefType) {
+        case ClefType.treble:
+        case ClefType.treble8va:
+        case ClefType.treble8vb:
+        case ClefType.treble15ma:
+        case ClefType.treble15mb:
           clefWidth = gClefWidth;
           break;
-        case 'f':
+        case ClefType.bass:
+        case ClefType.bassThirdLine:
+        case ClefType.bass8va:
+        case ClefType.bass8vb:
+        case ClefType.bass15ma:
+        case ClefType.bass15mb:
           clefWidth = fClefWidth;
           break;
-        case 'c':
+        case ClefType.soprano:
+        case ClefType.mezzoSoprano:
+        case ClefType.alto:
+        case ClefType.tenor:
+        case ClefType.baritone:
+        case ClefType.c8vb:
           clefWidth = cClefWidth;
           break;
         default:
@@ -171,15 +246,16 @@ class LayoutEngine {
       return (clefWidth + 0.5) * staffSpace; // Clave + espaço oficial
     } else if (element is KeySignature) {
       if (element.count == 0) {
-        return 0.5 * staffSpace; // Pequeno espaço mesmo sem acidentes
+        return 0.3 * staffSpace; // Espaço mínimo sem acidentes
       }
-      // Usar largura oficial dos acidentes + espaçamento oficial
+      // Usar largura oficial dos acidentes + espaçamento compacto
       final isSharp = element.count > 0;
       final accidentalWidth = isSharp ? accidentalSharpWidth : accidentalFlatWidth;
       final spacing = 0.8; // Espaçamento padrão entre acidentes
-      return (element.count.abs() * spacing + accidentalWidth + 0.5) * staffSpace;
+      // Espaçamento mais compacto após a armadura
+      return (element.count.abs() * spacing + accidentalWidth + 0.3) * staffSpace;
     } else if (element is TimeSignature) {
-      return 2.5 * staffSpace; // Fórmula de compasso + espaço
+      return 4.5 * staffSpace; // Fórmula de compasso + espaço generoso para primeira nota
     } else if (element is Note) {
       double width = 0;
 
@@ -234,24 +310,23 @@ class LayoutEngine {
     return staffSpace; // Valor padrão para elementos não reconhecidos
   }
 
-  /// Retorna o espaçamento baseado na duração
+  /// Retorna o espaçamento baseado na duração real (incluindo pontos)
   double _getDurationSpacing(Duration duration) {
-    // Espaçamento proporcional logarítmico para melhor distribuição visual
-    switch (duration.type) {
-      case DurationType.whole:
-        return 4.0;
-      case DurationType.half:
-        return 3.0;
-      case DurationType.quarter:
-        return 2.0;
-      case DurationType.eighth:
-        return 1.5;
-      case DurationType.sixteenth:
-        return 1.25;
-    }
+    // Espaçamento baseado na duração real, com ajuste logarítmico para visualização
+    final realValue = duration.realValue;
+
+    // Fórmula logarítmica: quanto maior a duração, mais espaço (mas não linear)
+    // Base: semínima (0.25) = 2.0 staff spaces
+    double spacing = 2.0 * (realValue / 0.25);
+
+    // Aplicar compressão logarítmica para evitar espaços excessivos
+    spacing = 1.0 + (spacing - 1.0) * 0.7;
+
+    // Limitar valores mínimos e máximos
+    return spacing.clamp(1.0, 5.0);
   }
 
-  /// Layout de um compasso completo
+  /// Layout de um compasso completo com distribuição inteligente
   double _layoutMeasure(
     Measure measure,
     List<PositionedElement> positionedElements,
@@ -260,99 +335,240 @@ class LayoutEngine {
     int system,
     bool isFirstInSystem,
   ) {
-    double currentX = startX;
-
     // Processar elementos considerando beams
     final processedElements = _processBeams(measure.elements);
 
-    for (final element in processedElements) {
-      // Pular elementos de sistema se não for o primeiro compasso do sistema
-      if (!isFirstInSystem && _isSystemElement(element)) {
-        continue;
-      }
+    // Filtrar elementos que serão renderizados
+    final elementsToRender = processedElements.where((element) {
+      return isFirstInSystem || !_isSystemElement(element);
+    }).toList();
 
-      // Adicionar elemento posicionado
+    if (elementsToRender.isEmpty) return startX;
+
+    // Calcular largura total do compasso
+    final totalMeasureWidth = _calculateMeasureWidth(measure, isFirstInSystem);
+
+    // Separar elementos de sistema dos elementos musicais
+    final systemElements = <MusicalElement>[];
+    final musicalElements = <MusicalElement>[];
+
+    for (final element in elementsToRender) {
+      if (_isSystemElement(element)) {
+        systemElements.add(element);
+      } else {
+        musicalElements.add(element);
+      }
+    }
+
+    double currentX = startX;
+
+    // 1. Posicionar elementos de sistema primeiro (clave, armadura, tempo)
+    for (final element in systemElements) {
       positionedElements.add(
         PositionedElement(element, Offset(currentX, y), system: system),
       );
-
-      // Avançar posição X
       currentX += _getElementWidth(element);
     }
 
-    return currentX;
+    // 2. Distribuir elementos musicais proporcionalmente no espaço restante
+    if (musicalElements.isNotEmpty) {
+      // Adicionar espaçamento inicial para todos os compassos (não só o primeiro)
+      final initialSpacing = isFirstInSystem ? 0 : staffSpace * 1.5; // Espaço após barra de compasso
+
+      // Espaçamento final muito reduzido para evitar excesso antes da barra
+      final noteCount = musicalElements.where((e) => e is Note || e.runtimeType.toString() == 'Chord').length;
+      double finalSpacing;
+
+      if (noteCount >= 6) {
+        finalSpacing = staffSpace * 0.15; // Compassos densos: espaçamento mínimo
+      } else if (noteCount >= 4) {
+        finalSpacing = staffSpace * 0.2; // Densidade média
+      } else if (noteCount >= 2) {
+        finalSpacing = staffSpace * 0.25; // Poucos elementos
+      } else {
+        finalSpacing = staffSpace * 0.3; // Compasso muito simples
+      }
+
+      currentX += initialSpacing;
+
+      // Calcular espaço disponível considerando o espaçamento final
+      final availableSpace = totalMeasureWidth - (currentX - startX) - finalSpacing;
+      final spaceBetweenNotes = _calculateOptimalSpacing(
+        musicalElements,
+        availableSpace,
+      );
+
+      for (int i = 0; i < musicalElements.length; i++) {
+        final element = musicalElements[i];
+
+        // Aplicar espaçamento proporcional
+        if (i > 0) {
+          currentX += spaceBetweenNotes;
+        }
+
+        positionedElements.add(
+          PositionedElement(element, Offset(currentX, y), system: system),
+        );
+
+        // Avançar pela largura mínima do elemento
+        currentX += _getMinimalElementWidth(element);
+      }
+
+      // Adicionar espaçamento no final do compasso para garantir distância da próxima barra
+      currentX += finalSpacing;
+    }
+
+    return startX + totalMeasureWidth;
   }
 
-  /// Processa grupos de notas com barras de ligação (beams)
+  /// Calcula espaçamento ótimo entre elementos musicais
+  double _calculateOptimalSpacing(
+    List<MusicalElement> elements,
+    double availableSpace,
+  ) {
+    if (elements.length <= 1) return 0;
+
+    // Calcular largura mínima total dos elementos
+    double totalMinimalWidth = 0;
+    for (final element in elements) {
+      totalMinimalWidth += _getMinimalElementWidth(element);
+    }
+
+    // Espaço disponível para distribuição
+    final spaceForDistribution = availableSpace - totalMinimalWidth;
+    final gaps = elements.length - 1;
+
+    if (gaps <= 0 || spaceForDistribution <= 0) {
+      return staffSpace * 0.5; // Espaçamento mínimo
+    }
+
+    // Distribuir espaço uniformemente, com limites
+    double spacing = spaceForDistribution / gaps;
+
+    // Limites de espaçamento para manter legibilidade
+    final minSpacing = staffSpace * 0.8;
+    final maxSpacing = staffSpace * 4.0;
+
+    return spacing.clamp(minSpacing, maxSpacing);
+  }
+
+  /// Retorna largura mínima de um elemento (sem espaçamento extra)
+  double _getMinimalElementWidth(MusicalElement element) {
+    if (element is Note) {
+      double width = noteheadBlackWidth * staffSpace;
+      if (element.pitch.accidentalGlyph != null) {
+        final accidentalWidth = element.pitch.accidentalGlyph!.contains('Sharp')
+            ? accidentalSharpWidth
+            : accidentalFlatWidth;
+        width += (accidentalWidth + 0.3) * staffSpace;
+      }
+      return width;
+    } else if (element is Rest) {
+      return staffSpace;
+    } else if (element is Chord) {
+      double width = noteheadBlackWidth * staffSpace;
+      bool hasAccidental = false;
+      double maxAccidentalWidth = 0;
+
+      for (final note in element.notes) {
+        if (note.pitch.accidentalGlyph != null) {
+          hasAccidental = true;
+          final accWidth = note.pitch.accidentalGlyph!.contains('Sharp')
+              ? accidentalSharpWidth
+              : accidentalFlatWidth;
+          if (accWidth > maxAccidentalWidth) {
+            maxAccidentalWidth = accWidth;
+          }
+        }
+      }
+
+      if (hasAccidental) {
+        width += (maxAccidentalWidth + 0.3) * staffSpace;
+      }
+      return width;
+    }
+
+    return staffSpace * 0.5; // Padrão para outros elementos
+  }
+
+  /// Processa grupos de notas com barras de ligação (beams) usando lógica inteligente
   List<MusicalElement> _processBeams(List<MusicalElement> elements) {
-    final List<MusicalElement> result = [];
-    final queue = Queue<MusicalElement>.from(elements);
+    // Encontrar fórmula de compasso no compasso
+    TimeSignature? timeSignature;
+    for (final element in elements) {
+      if (element is TimeSignature) {
+        timeSignature = element;
+        break;
+      }
+    }
 
-    while (queue.isNotEmpty) {
-      final current = queue.removeFirst();
+    timeSignature ??= TimeSignature(numerator: 4, denominator: 4);
 
-      if (current is Note && _isBeamable(current) && current.beam == null) {
-        final beamGroup = <Note>[current];
+    // Extrair apenas as notas para agrupamento
+    final notes = elements.whereType<Note>().toList();
 
-        // Coletar todas as notas consecutivas que podem ser agrupadas
-        while (queue.isNotEmpty) {
-          final next = queue.first;
-          if (next is Note && _isBeamable(next) && next.beam == null) {
-            // *** CORREÇÃO DO ERRO DE TIPO APLICADA AQUI ***
-            // Adiciona 'next' (que já foi promovido para o tipo Note)
-            // e somente depois remove da fila.
-            beamGroup.add(next);
-            queue.removeFirst();
-          } else {
+    if (notes.isEmpty) return elements;
+
+    // Usar nova lógica inteligente de agrupamento
+    final beamGroups = BeamGrouper.groupNotesForBeaming(notes, timeSignature);
+
+    // Aplicar agrupamento de beams às notas originais
+    final processedElements = <MusicalElement>[];
+    final processedNotes = <Note>{};
+
+    for (final element in elements) {
+      if (element is Note && !processedNotes.contains(element)) {
+        // Verificar se esta nota faz parte de um grupo de beam
+        BeamGroup? group;
+        for (final beamGroup in beamGroups) {
+          if (beamGroup.notes.contains(element)) {
+            group = beamGroup;
             break;
           }
         }
 
-        // Se temos mais de uma nota, criar grupo com beam
-        if (beamGroup.length > 1) {
-          for (int i = 0; i < beamGroup.length; i++) {
-            BeamType beamType;
+        if (group != null && group.isValid) {
+          // Processar todo o grupo
+          for (int i = 0; i < group.notes.length; i++) {
+            final note = group.notes[i];
+            BeamType? beamType;
+
             if (i == 0) {
               beamType = BeamType.start;
-            } else if (i == beamGroup.length - 1) {
+            } else if (i == group.notes.length - 1) {
               beamType = BeamType.end;
             } else {
               beamType = BeamType.inner;
             }
 
-            result.add(_cloneNoteWithBeam(beamGroup[i], beamType));
+            // Criar nova nota com informação de beam
+            final beamedNote = Note(
+              pitch: note.pitch,
+              duration: note.duration,
+              beam: beamType,
+              articulations: note.articulations,
+              tie: note.tie,
+              slur: note.slur,
+              ornaments: note.ornaments,
+              dynamicElement: note.dynamicElement,
+              techniques: note.techniques,
+            );
+
+            processedElements.add(beamedNote);
+            processedNotes.add(note);
           }
         } else {
-          result.add(current);
+          // Nota isolada, manter como está
+          processedElements.add(element);
+          processedNotes.add(element);
         }
-      } else {
-        result.add(current);
+      } else if (element is! Note) {
+        // Elementos que não são notas, manter como estão
+        processedElements.add(element);
       }
     }
 
-    return result;
-  }
-
-  /// Verifica se uma nota pode ter beam
-  bool _isBeamable(Note note) {
-    // Notas com colcheia ou menor podem ter beam
-    return note.duration.type == DurationType.eighth ||
-        note.duration.type == DurationType.sixteenth;
-  }
-
-  /// Clona uma nota adicionando informação de beam
-  Note _cloneNoteWithBeam(Note original, BeamType beamType) {
-    return Note(
-      pitch: original.pitch,
-      duration: original.duration,
-      beam: beamType,
-      articulations: original.articulations,
-      tie: original.tie,
-      slur: original.slur,
-      ornaments: original.ornaments,
-      dynamicElement: original.dynamicElement,
-      techniques: original.techniques,
-    );
+    return processedElements;
   }
 
   /// Calcula a altura total necessária para o layout

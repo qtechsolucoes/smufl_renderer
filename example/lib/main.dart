@@ -14,6 +14,10 @@ import 'examples/jazz_example.dart';
 import 'examples/precision_test_example.dart';
 import 'examples/debug_visual_example.dart';
 import 'examples/simple_debug_example.dart';
+import 'examples/advanced_features_example.dart';
+import 'examples/complete_notation_example.dart';
+import 'examples/comprehensive_symbols_example.dart';
+import 'examples/beams_and_tuplets_example.dart';
 
 // 2. A função main agora é assíncrona para esperar o carregamento da fonte
 Future<void> main() async {
@@ -63,8 +67,12 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   final List<Widget> _examples = [
     const BasicExample(),
+    const CompleteNotationExample(),
+    const ComprehensiveSymbolsExample(),
+    const BeamsAndTupletsExample(),
     const AdvancedExample(),
     const ComplexExample(),
+    const AdvancedFeaturesExample(),
     const MicrotonalExample(),
     const PercussionExample(),
     const ContemporaryExample(),
@@ -77,8 +85,12 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   final List<String> _titles = [
     'Exemplo Básico',
+    'Notação Completa ⭐',
+    'Símbolos Abrangentes',
+    'Beams e Quiálteras ⭐',
     'Exemplo Avançado',
     'Exemplo Complexo',
+    'Funcionalidades Avançadas',
     'Microtonal',
     'Percussão',
     'Contemporâneo',

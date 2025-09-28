@@ -110,6 +110,59 @@ class Pitch {
     );
   }
 
+  /// Constrói um Pitch a partir de uma string (ex: "C4", "F#5", "Bb3")
+  factory Pitch.fromString(String notation) {
+    if (notation.isEmpty) {
+      throw ArgumentError('Notation cannot be empty');
+    }
+
+    // Extrair a nota base (primeira letra)
+    final step = notation[0].toUpperCase();
+    if (!'CDEFGAB'.contains(step)) {
+      throw ArgumentError('Invalid note step: $step');
+    }
+
+    // Encontrar onde começa o número da oitava
+    int octaveStart = 1;
+    double alter = 0.0;
+    AccidentalType? accidentalType;
+
+    // Processar acidentes
+    if (notation.length > 1) {
+      for (int i = 1; i < notation.length; i++) {
+        final char = notation[i];
+        if (char == '#') {
+          alter += 1.0;
+          accidentalType = alter == 1.0 ? AccidentalType.sharp : AccidentalType.doubleSharp;
+        } else if (char == 'b') {
+          alter -= 1.0;
+          accidentalType = alter == -1.0 ? AccidentalType.flat : AccidentalType.doubleFlat;
+        } else if (char.contains(RegExp(r'[0-9]'))) {
+          octaveStart = i;
+          break;
+        }
+      }
+    }
+
+    // Extrair a oitava
+    if (octaveStart >= notation.length) {
+      throw ArgumentError('Missing octave number in notation: $notation');
+    }
+
+    final octaveString = notation.substring(octaveStart);
+    final octave = int.tryParse(octaveString);
+    if (octave == null) {
+      throw ArgumentError('Invalid octave number: $octaveString');
+    }
+
+    return Pitch(
+      step: step,
+      octave: octave,
+      alter: alter,
+      accidentalType: accidentalType,
+    );
+  }
+
   /// Calcula o número MIDI da nota (C4 = 60).
   /// Para microtons, retorna o valor mais próximo.
   int get midiNumber {

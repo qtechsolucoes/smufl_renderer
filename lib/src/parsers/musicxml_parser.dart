@@ -285,6 +285,12 @@ class MusicXMLParser {
         case '16th':
           durationType = DurationType.sixteenth;
           break;
+        case '32nd':
+          durationType = DurationType.thirtySecond;
+          break;
+        case '64th':
+          durationType = DurationType.sixtyFourth;
+          break;
       }
     }
 
@@ -308,11 +314,53 @@ class MusicXMLParser {
         case 'staccato':
           articulations.add(ArticulationType.staccato);
           break;
+        case 'staccatissimo':
+          articulations.add(ArticulationType.staccatissimo);
+          break;
         case 'accent':
           articulations.add(ArticulationType.accent);
           break;
+        case 'strong-accent':
+          articulations.add(ArticulationType.strongAccent);
+          break;
         case 'tenuto':
           articulations.add(ArticulationType.tenuto);
+          break;
+        case 'marcato':
+          articulations.add(ArticulationType.marcato);
+          break;
+        case 'legato':
+          articulations.add(ArticulationType.legato);
+          break;
+        case 'portato':
+          articulations.add(ArticulationType.portato);
+          break;
+        case 'up-bow':
+          articulations.add(ArticulationType.upBow);
+          break;
+        case 'down-bow':
+          articulations.add(ArticulationType.downBow);
+          break;
+        case 'harmonics':
+          articulations.add(ArticulationType.harmonics);
+          break;
+        case 'pizzicato':
+          articulations.add(ArticulationType.pizzicato);
+          break;
+        case 'snap':
+          articulations.add(ArticulationType.snap);
+          break;
+        case 'thumb':
+          articulations.add(ArticulationType.thumb);
+          break;
+        case 'stopped':
+          articulations.add(ArticulationType.stopped);
+          break;
+        case 'open':
+          articulations.add(ArticulationType.open);
+          break;
+        case 'half-stopped':
+          articulations.add(ArticulationType.halfStopped);
           break;
       }
     }
@@ -432,6 +480,12 @@ class MusicXMLParser {
       case '16th':
         beatUnit = DurationType.sixteenth;
         break;
+      case '32nd':
+        beatUnit = DurationType.thirtySecond;
+        break;
+      case '64th':
+        beatUnit = DurationType.sixtyFourth;
+        break;
     }
 
     final bpm = int.tryParse(perMinuteElement.innerText);
@@ -533,8 +587,12 @@ class MusicXMLParser {
         builder.element(
           'clef',
           nest: () {
-            builder.element('sign', nest: element.type.toUpperCase());
-            builder.element('line', nest: element.type == 'g' ? '2' : '4');
+            final clefSign = element.actualClefType.name.startsWith('treble') ? 'G' :
+                           element.actualClefType.name.startsWith('bass') ? 'F' : 'C';
+            final clefLine = element.actualClefType.name.startsWith('treble') ? '2' :
+                           element.actualClefType.name.startsWith('bass') ? '4' : '3';
+            builder.element('sign', nest: clefSign);
+            builder.element('line', nest: clefLine);
           },
         );
       } else if (element is KeySignature) {
@@ -704,6 +762,12 @@ class MusicXMLParser {
         return 'eighth';
       case DurationType.sixteenth:
         return '16th';
+      case DurationType.thirtySecond:
+        return '32nd';
+      case DurationType.sixtyFourth:
+        return '64th';
+      case DurationType.oneHundredTwentyEighth:
+        return '128th';
     }
   }
 
@@ -711,10 +775,38 @@ class MusicXMLParser {
     switch (type) {
       case ArticulationType.staccato:
         return 'staccato';
+      case ArticulationType.staccatissimo:
+        return 'staccatissimo';
       case ArticulationType.accent:
         return 'accent';
+      case ArticulationType.strongAccent:
+        return 'strong-accent';
       case ArticulationType.tenuto:
         return 'tenuto';
+      case ArticulationType.marcato:
+        return 'marcato';
+      case ArticulationType.legato:
+        return 'legato';
+      case ArticulationType.portato:
+        return 'portato';
+      case ArticulationType.upBow:
+        return 'up-bow';
+      case ArticulationType.downBow:
+        return 'down-bow';
+      case ArticulationType.harmonics:
+        return 'harmonics';
+      case ArticulationType.pizzicato:
+        return 'pizzicato';
+      case ArticulationType.snap:
+        return 'snap';
+      case ArticulationType.thumb:
+        return 'thumb';
+      case ArticulationType.stopped:
+        return 'stopped';
+      case ArticulationType.open:
+        return 'open';
+      case ArticulationType.halfStopped:
+        return 'half-stopped';
     }
   }
 

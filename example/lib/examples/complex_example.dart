@@ -92,6 +92,12 @@ class ComplexExample extends StatelessWidget {
       ornaments: [Ornament(type: OrnamentType.grace, above: true)],
     ));
 
+    // Verificação de validação do compasso 6/8
+    // Total esperado: 3×0.125 + 1×0.25 + 1×0.125 = 0.75 (correto para 6/8)
+    debugPrint('Measure 1 value: ${measure1.currentMusicalValue}');
+    debugPrint('Time signature capacity: ${measure1.timeSignature?.measureValue}');
+    debugPrint('Is valid: ${measure1.isValidlyFilled}');
+
     final measure2 = Measure();
 
     // Respiração

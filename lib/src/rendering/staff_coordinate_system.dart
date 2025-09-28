@@ -14,20 +14,20 @@ class StaffCoordinateSystem {
   });
 
   /// Retorna a posição Y de uma linha específica da pauta
-  /// Linhas: 1 (superior) até 5 (inferior)
+  /// Linhas: 1 (inferior) até 5 (superior) - numeração padrão musical
   /// Linha 3 é o baseline (centro)
   double getStaffLineY(int lineNumber) {
-    // Linhas são numeradas de 1-5, com 3 sendo o centro
-    final offsetFromBaseline = (3 - lineNumber) * staffSpace;
-    return staffBaseline.dy + offsetFromBaseline;
+    // Corrigir numeração: linha 1 = inferior, linha 5 = superior
+    final offsetFromBaseline = (lineNumber - 3) * staffSpace;
+    return staffBaseline.dy - offsetFromBaseline;
   }
 
   /// Retorna a posição Y de um espaço específico da pauta
   /// Espaços: 1 (entre linhas 1-2) até 4 (entre linhas 4-5)
   double getStaffSpaceY(int spaceNumber) {
-    // Espaços são meio staff space acima/abaixo das linhas
-    final offsetFromBaseline = (3.5 - spaceNumber) * staffSpace;
-    return staffBaseline.dy + offsetFromBaseline;
+    // Corrigir numeração: espaço 1 = inferior, espaço 4 = superior
+    final offsetFromBaseline = (spaceNumber - 2.5) * staffSpace;
+    return staffBaseline.dy - offsetFromBaseline;
   }
 
   /// Converte posição de nota (step + octave) para posição Y na pauta
@@ -144,4 +144,13 @@ class StaffCoordinateSystem {
 
   /// Altura total incluindo margens
   double get totalHeight => totalStaffHeight + (staffMargin * 2);
+
+  /// Calcula a posição staff position (line number) baseado em Y
+  /// Retorna valores como: -4, -3, -2, -1, 0, 1, 2, 3, 4
+  /// onde 0 = linha central, positivo = acima, negativo = abaixo
+  int getStaffPosition(double y) {
+    final deltaY = staffBaseline.dy - y;
+    final staffSpacePosition = deltaY / (staffSpace * 0.5);
+    return staffSpacePosition.round();
+  }
 }

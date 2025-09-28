@@ -9,6 +9,7 @@ import 'src/smufl/smufl_metadata_loader.dart';
 import 'src/theme/music_score_theme.dart';
 
 export 'src/music_model/musical_element.dart';
+export 'src/music_model/advanced_elements.dart';
 export 'src/theme/music_score_theme.dart';
 export 'src/layout/layout_engine.dart';
 export 'src/parsers/json_parser.dart';

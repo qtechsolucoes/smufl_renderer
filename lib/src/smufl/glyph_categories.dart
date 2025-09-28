@@ -250,6 +250,60 @@ class SmuflGlyphCategories {
     'repeatLeft': 'Repetição esquerda',
     'repeatRight': 'Repetição direita',
     'repeatDots': 'Pontos de repetição',
+    'simile': 'Simile',
+    'percent': 'Repetição porcentagem',
+  };
+
+  // === RESPIRAÇÕES E CAESURAS ===
+  static const Map<String, String> breaths = {
+    'breathMarkComma': 'Vírgula de respiração',
+    'breathMarkTick': 'Tick de respiração',
+    'breathMarkUpbow': 'Respiração arco para cima',
+    'caesura': 'Caesura',
+    'caesuraShort': 'Caesura curta',
+    'caesuraThick': 'Caesura grossa',
+    'caesuraCurved': 'Caesura curva',
+  };
+
+  // === SINAIS DE OITAVA ===
+  static const Map<String, String> octaves = {
+    'ottava': '8va (oitava acima)',
+    'ottavaBassa': '8vb (oitava abaixo)',
+    'quindicesima': '15ma (duas oitavas acima)',
+    'quindicesimaAlta': '15mb (duas oitavas abaixo)',
+    'ventiduesima': '22ma (três oitavas acima)',
+    'ventiduesimaAlta': '22mb (três oitavas abaixo)',
+  };
+
+  // === CLUSTERS ===
+  static const Map<String, String> clusters = {
+    'noteClusterSquareBlack': 'Cluster quadrado preto',
+    'noteClusterSquareWhite': 'Cluster quadrado branco',
+    'noteClusterRoundBlack': 'Cluster redondo preto',
+    'noteClusterRoundWhite': 'Cluster redondo branco',
+  };
+
+  // === HARMÔNICOS ===
+  static const Map<String, String> harmonics = {
+    'noteheadDiamondHalf': 'Harmônico natural (losango)',
+    'noteheadCircleXHalf': 'Harmônico artificial (círculo X)',
+    'stringsHarmonic': 'Harmônico (cordas)',
+    'brassMuteOpen': 'Som aberto (sopros)',
+    'brassMuteClosed': 'Som fechado (sopros)',
+  };
+
+  // === SÍMBOLOS MICROTONAIS ===
+  static const Map<String, String> microtonals = {
+    'accidentalQuarterToneSharpStein': 'Quarto de tom sustenido',
+    'accidentalQuarterToneFlatStein': 'Quarto de tom bemol',
+    'accidentalThreeQuarterTonesSharpStein': 'Três quartos de tom sustenido',
+    'accidentalThreeQuarterTonesFlatZimmermann': 'Três quartos de tom bemol',
+    'accidentalKomaSharp': 'Koma sustenido',
+    'accidentalKomaFlat': 'Koma bemol',
+    'accSagittal11MediumDiesisUp': 'Sagittal médio diesis para cima',
+    'accSagittal11MediumDiesisDown': 'Sagittal médio diesis para baixo',
+    'accSagittal11LargeDiesisUp': 'Sagittal grande diesis para cima',
+    'accSagittal11LargeDiesisDown': 'Sagittal grande diesis para baixo',
   };
 
   // === MÉTODOS UTILITÁRIOS ===
@@ -269,6 +323,11 @@ class SmuflGlyphCategories {
       'barlines': barlines,
       'numbers': numbers,
       'repeats': repeats,
+      'breaths': breaths,
+      'octaves': octaves,
+      'clusters': clusters,
+      'harmonics': harmonics,
+      'microtonals': microtonals,
     };
   }
 

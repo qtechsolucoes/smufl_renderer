@@ -263,6 +263,14 @@ enum RepeatType {
   daCapoAlCoda,
   fine,
   toCoda,
+  // Novos tipos de repetição
+  segnoSquare,
+  codaSquare,
+  repeat1Bar,
+  repeat2Bars,
+  repeat4Bars,
+  simile,
+  percentRepeat,
 }
 
 class RepeatMark extends MusicalElement {
@@ -416,4 +424,151 @@ class Harmonic extends MusicalElement {
   final Pitch? soundingPitch;
 
   Harmonic({required this.type, this.soundingPitch});
+}
+
+// === SINAIS DE OITAVA ===
+
+enum OctaveType {
+  octave8va,      // 8va (uma oitava acima)
+  octave8vb,      // 8vb (uma oitava abaixo)
+  octave15ma,     // 15ma (duas oitavas acima)
+  octave15mb,     // 15mb (duas oitavas abaixo)
+  octave22ma,     // 22ma (três oitavas acima)
+  octave22mb,     // 22mb (três oitavas abaixo)
+}
+
+class OctaveMark extends MusicalElement {
+  final OctaveType type;
+  final double? length; // Comprimento da linha
+  final bool showBracket;
+  final String? text; // Texto customizado (ex: "loco")
+
+  OctaveMark({
+    required this.type,
+    this.length,
+    this.showBracket = true,
+    this.text,
+  });
+
+  /// Retorna o glifo SMuFL apropriado
+  String get glyphName {
+    switch (type) {
+      case OctaveType.octave8va:
+        return 'ottava';
+      case OctaveType.octave8vb:
+        return 'ottavaBassa';
+      case OctaveType.octave15ma:
+        return 'quindicesima';
+      case OctaveType.octave15mb:
+        return 'quindicesimaAlta';
+      case OctaveType.octave22ma:
+        return 'ventiduesima';
+      case OctaveType.octave22mb:
+        return 'ventiduesimaAlta';
+    }
+  }
+
+  /// Retorna o número do deslocamento de oitava
+  int get octaveShift {
+    switch (type) {
+      case OctaveType.octave8va:
+        return 1;
+      case OctaveType.octave8vb:
+        return -1;
+      case OctaveType.octave15ma:
+        return 2;
+      case OctaveType.octave15mb:
+        return -2;
+      case OctaveType.octave22ma:
+        return 3;
+      case OctaveType.octave22mb:
+        return -3;
+    }
+  }
+}
+
+// === CLUSTERS E NOTAÇÃO CONTEMPORÂNEA ===
+
+enum ClusterType {
+  tone,           // Cluster de tons
+  semitone,       // Cluster de semitons
+  microtone,      // Cluster microtonal
+  white,          // Somente teclas brancas
+  black,          // Somente teclas pretas
+}
+
+class Cluster extends MusicalElement {
+  final ClusterType type;
+  final Pitch lowestNote;
+  final Pitch highestNote;
+  final Duration duration;
+  final bool showBracket;
+
+  Cluster({
+    required this.type,
+    required this.lowestNote,
+    required this.highestNote,
+    required this.duration,
+    this.showBracket = true,
+  });
+}
+
+// === SÍMBOLOS DE MÉTRICA E MARCAÇÃO TEMPORAL ===
+
+enum MetronomeMarkType {
+  note,           // Nota + BPM
+  equation,       // Nota = Nota
+  range,          // Faixa de BPM
+  approximate,    // BPM aproximado
+}
+
+class MetronomeMark extends MusicalElement {
+  final MetronomeMarkType type;
+  final DurationType? leftNote;
+  final DurationType? rightNote;
+  final int? bpm;
+  final int? minBpm;
+  final int? maxBpm;
+  final bool showParentheses;
+
+  MetronomeMark({
+    required this.type,
+    this.leftNote,
+    this.rightNote,
+    this.bpm,
+    this.minBpm,
+    this.maxBpm,
+    this.showParentheses = false,
+  });
+}
+
+// === CAESURAS E RESPIRAÇÕES AVANÇADAS ===
+
+enum CaesuraType {
+  short,          // Caesura curta
+  long,           // Caesura longa
+  thick,          // Caesura grossa
+  curved,         // Caesura curva
+  double,         // Caesura dupla
+}
+
+class Caesura extends MusicalElement {
+  final CaesuraType type;
+
+  Caesura({required this.type});
+
+  String get glyphName {
+    switch (type) {
+      case CaesuraType.short:
+        return 'caesuraShort';
+      case CaesuraType.long:
+        return 'caesura';
+      case CaesuraType.thick:
+        return 'caesuraThick';
+      case CaesuraType.curved:
+        return 'caesuraCurved';
+      case CaesuraType.double:
+        return 'caesura';
+    }
+  }
 }

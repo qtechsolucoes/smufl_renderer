@@ -156,7 +156,7 @@ class JsonMusicParser {
 
   static Map<String, dynamic> _elementToMap(MusicalElement element) {
     if (element is Clef) {
-      return {'type': 'clef', 'clefType': element.type};
+      return {'type': 'clef', 'clefType': element.actualClefType.name};
     } else if (element is KeySignature) {
       return {'type': 'keySignature', 'count': element.count};
     } else if (element is TimeSignature) {
@@ -211,6 +211,12 @@ class JsonMusicParser {
         return 'eighth';
       case DurationType.sixteenth:
         return 'sixteenth';
+      case DurationType.thirtySecond:
+        return 'thirtySecond';
+      case DurationType.sixtyFourth:
+        return 'sixtyFourth';
+      case DurationType.oneHundredTwentyEighth:
+        return 'oneHundredTwentyEighth';
     }
   }
 
@@ -218,10 +224,38 @@ class JsonMusicParser {
     switch (type) {
       case ArticulationType.staccato:
         return 'staccato';
+      case ArticulationType.staccatissimo:
+        return 'staccatissimo';
       case ArticulationType.accent:
         return 'accent';
+      case ArticulationType.strongAccent:
+        return 'strongAccent';
       case ArticulationType.tenuto:
         return 'tenuto';
+      case ArticulationType.marcato:
+        return 'marcato';
+      case ArticulationType.legato:
+        return 'legato';
+      case ArticulationType.portato:
+        return 'portato';
+      case ArticulationType.upBow:
+        return 'upBow';
+      case ArticulationType.downBow:
+        return 'downBow';
+      case ArticulationType.harmonics:
+        return 'harmonics';
+      case ArticulationType.pizzicato:
+        return 'pizzicato';
+      case ArticulationType.snap:
+        return 'snap';
+      case ArticulationType.thumb:
+        return 'thumb';
+      case ArticulationType.stopped:
+        return 'stopped';
+      case ArticulationType.open:
+        return 'open';
+      case ArticulationType.halfStopped:
+        return 'halfStopped';
     }
   }
 }

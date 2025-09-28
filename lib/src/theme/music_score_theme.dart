@@ -25,6 +25,13 @@ class MusicScoreTheme {
   final Color? harmonicColor;
   final Color? textColor;
 
+  // Cores para novos elementos
+  final Color? repeatColor;
+  final Color? octaveColor;
+  final Color? clusterColor;
+  final Color? caesuraColor;
+  final Color? metronomeColor;
+
   // Estilos de texto
   final TextStyle? textStyle;
   final TextStyle? dynamicTextStyle;
@@ -34,6 +41,11 @@ class MusicScoreTheme {
   final TextStyle? lyricTextStyle;
   final TextStyle? chordTextStyle;
   final TextStyle? rehearsalTextStyle;
+
+  // Novos estilos de texto
+  final TextStyle? repeatTextStyle;
+  final TextStyle? octaveTextStyle;
+  final TextStyle? metronomeTextStyle;
 
   // Configurações de renderização
   final double? defaultStaffSpace;
@@ -66,6 +78,13 @@ class MusicScoreTheme {
     this.harmonicColor,
     this.textColor,
 
+    // Cores para novos elementos
+    this.repeatColor,
+    this.octaveColor,
+    this.clusterColor,
+    this.caesuraColor,
+    this.metronomeColor,
+
     // Estilos de texto
     this.textStyle,
     this.dynamicTextStyle,
@@ -75,6 +94,11 @@ class MusicScoreTheme {
     this.lyricTextStyle,
     this.chordTextStyle,
     this.rehearsalTextStyle,
+
+    // Novos estilos de texto
+    this.repeatTextStyle,
+    this.octaveTextStyle,
+    this.metronomeTextStyle,
 
     // Configurações
     this.defaultStaffSpace,

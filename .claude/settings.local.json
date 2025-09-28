@@ -9,7 +9,12 @@
       "Read(//c/Users/aless/Downloads/**)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(q)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(dart analyze:*)",
+      "Bash(dart compile:*)",
+      "WebSearch",
+      "WebFetch(domain:vexflow.github.io)"
     ],
     "deny": [],
     "ask": []
