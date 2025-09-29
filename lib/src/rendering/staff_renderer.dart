@@ -925,30 +925,33 @@ class StaffRenderer {
   ) {
     if (note.ornaments.isEmpty) return;
 
-    // Determinar se a nota tem haste para cima ou para baixo
+    // Determinar se a nota tem haste para cima ou para baixo (seguindo padrão SMuFL)
     final stemUp = staffPosition <= 0;
 
     for (final ornament in note.ornaments) {
+      // Verificar se é um ornamento especial que precisa renderização customizada
+      if (_isSpecialOrnament(ornament.type)) {
+        _renderSpecialOrnament(canvas, ornament, note, notePos, staffPosition);
+        continue;
+      }
+
       final glyphName = _getOrnamentGlyph(ornament.type);
       if (glyphName == null) continue;
 
-      // Calcular posicionamento baseado nas regras especificadas
-      final ornamentAbove = _shouldPlaceOrnamentAbove(ornament.type, staffPosition, stemUp);
-
-      // Calcular distância vertical baseada no tipo de ornamento
-      final verticalDistance = _getOrnamentVerticalDistance(ornament.type);
-
-      final ornamentY = ornamentAbove
-          ? notePos.dy - (coordinates.staffSpace * verticalDistance)
-          : notePos.dy + (coordinates.staffSpace * verticalDistance);
-
-      // Calcular posicionamento horizontal para alguns ornamentos específicos
-      final ornamentX = _getOrnamentHorizontalPosition(ornament.type, notePos.dx);
+      // Usar posicionamento SMuFL baseado em âncoras quando disponível
+      final ornamentPosition = _calculateOrnamentPositionSMuFL(
+        ornament,
+        note,
+        notePos,
+        staffPosition,
+        stemUp,
+        glyphName,
+      );
 
       _drawGlyph(
         canvas: canvas,
         glyphName: glyphName,
-        position: Offset(ornamentX, ornamentY),
+        position: ornamentPosition,
         size: glyphSize * 0.8,
         color: theme.ornamentColor ?? theme.noteheadColor,
         centerVertically: true,
@@ -957,57 +960,245 @@ class StaffRenderer {
     }
   }
 
-  bool _shouldPlaceOrnamentAbove(OrnamentType type, int staffPosition, bool stemUp) {
-    // Regra especial para fermatas - sempre seguem sua direção natural
-    if (type == OrnamentType.fermata) return true;
-    if (type == OrnamentType.fermataBelow || type == OrnamentType.fermataBelowInverted) return false;
-
-    // Notas altas (na 5ª linha ou acima): ornamentos embaixo para evitar colisão
-    if (staffPosition >= 4) return false;
-
-    // Notas muito baixas (1ª linha ou abaixo): ornamentos sempre acima
-    if (staffPosition <= -4) return true;
-
-    // Para notas na região média: seguir direção da haste
-    // Haste para cima = ornamento acima, haste para baixo = ornamento abaixo
-    return stemUp;
+  /// Verifica se é um ornamento que precisa renderização especial
+  bool _isSpecialOrnament(OrnamentType type) {
+    return type == OrnamentType.arpeggio ||
+           type == OrnamentType.glissando ||
+           type == OrnamentType.portamento;
   }
 
-  double _getOrnamentVerticalDistance(OrnamentType type) {
-    switch (type) {
-      case OrnamentType.fermata:
-      case OrnamentType.fermataBelow:
-      case OrnamentType.fermataBelowInverted:
-        return 2.0; // Fermatas mais distantes
+  /// Calcula posição do ornamento usando diretrizes SMuFL
+  Offset _calculateOrnamentPositionSMuFL(
+    Ornament ornament,
+    Note note,
+    Offset notePos,
+    int staffPosition,
+    bool stemUp,
+    String glyphName,
+  ) {
+    // 1. Determinar posição vertical baseada em regras SMuFL
+    final ornamentAbove = _shouldPlaceOrnamentAboveSMuFL(
+      ornament.type,
+      staffPosition,
+      stemUp,
+      ornament.above,
+      note,
+    );
 
-      case OrnamentType.arpeggio:
-        return 0.5; // Arpejos próximos à nota
+    // 2. Tentar usar âncoras SMuFL da nota se disponível
+    final noteheadGlyph = note.duration.type.glyphName;
+    final noteGlyphInfo = SmuflMetadata().getGlyphInfo(noteheadGlyph);
 
-      case OrnamentType.appoggiaturaUp:
-      case OrnamentType.appoggiaturaDown:
-      case OrnamentType.acciaccatura:
-        return 1.0; // Apoggiaturas próximas
+    double ornamentY;
+    if (noteGlyphInfo?.anchors != null) {
+      // Usar âncoras SMuFL para posicionamento preciso
+      final anchorName = ornamentAbove ? 'ornamentAbove' : 'ornamentBelow';
+      final anchor = noteGlyphInfo!.anchors!.getAnchorInPixels(
+        anchorName,
+        coordinates.staffSpace,
+      );
 
-      default:
-        return 1.5; // Trilos, mordentes, grupetos - distância padrão
+      if (anchor != null) {
+        // Posição baseada na âncora SMuFL
+        ornamentY = notePos.dy + anchor.dy;
+      } else {
+        // Fallback: usar posicionamento profissional baseado em haste
+        ornamentY = _calculateOrnamentYFromStem(
+          notePos.dy,
+          ornamentAbove,
+          staffPosition,
+          stemUp,
+          ornament.type,
+        );
+      }
+    } else {
+      // Fallback: usar posicionamento profissional
+      ornamentY = _calculateOrnamentYFromStem(
+        notePos.dy,
+        ornamentAbove,
+        staffPosition,
+        stemUp,
+        ornament.type,
+      );
+    }
+
+    // 3. Calcular posição horizontal
+    final ornamentX = _getOrnamentHorizontalPositionSMuFL(ornament.type, notePos.dx);
+
+    return Offset(ornamentX, ornamentY);
+  }
+
+  /// Determina se ornamento deve ficar acima seguindo regras tipográficas profissionais
+  bool _shouldPlaceOrnamentAboveSMuFL(
+    OrnamentType type,
+    int staffPosition,
+    bool stemUp,
+    bool? explicitAbove,
+    Note? note,
+  ) {
+    // 1. Se posição foi explicitamente definida, respeitar
+    if (explicitAbove != null) return explicitAbove;
+
+    // 2. Únicos casos especiais que ficam embaixo por definição do tipo
+    if (type == OrnamentType.fermataBelow || type == OrnamentType.fermataBelowInverted) return false;
+
+    // 3. REGRA TIPOGRÁFICA PRINCIPAL:
+    // TODOS os ornamentos ficam na parte SUPERIOR EXTERNA do pentagrama,
+    // independente da direção da haste da figura
+
+    // Exceção apenas para voz 2 (contralto) em notação polifônica
+    if (note?.voice == 2) {
+      return false; // Contralto: parte externa inferior
+    }
+
+    // REGRA GERAL: SEMPRE ACIMA (parte superior externa)
+    return true;
+  }
+
+  /// Calcula Y do ornamento seguindo regras tipográficas profissionais
+  double _calculateOrnamentYFromStem(
+    double noteY,
+    bool ornamentAbove,
+    int staffPosition,
+    bool stemUp,
+    OrnamentType type,
+  ) {
+    // Distância padrão baseada em especificações SMuFL
+    final baseDistance = coordinates.staffSpace * 2.5;
+
+    if (ornamentAbove) {
+      // REGRA TIPOGRÁFICA: SEMPRE na parte SUPERIOR EXTERNA
+      // INDEPENDENTE da direção da haste, o ornamento SEMPRE vai ACIMA
+
+      // Para QUALQUER nota com haste (para cima OU para baixo):
+      // Calcular a posição mais alta possível
+      if (stemUp) {
+        // Nota com haste para cima: acima da extremidade da haste
+        final stemHeight = coordinates.staffSpace * 3.5;
+        final stemTopY = noteY - stemHeight;
+        return stemTopY - (coordinates.staffSpace * 0.8);
+      } else {
+        // Nota com haste para baixo: TAMBÉM vai acima, mas da cabeça da nota
+        // NÃO seguir a haste para baixo!
+        return noteY - baseDistance;
+      }
+    } else {
+      // CASOS RAROS: apenas para contralto (voz 2) ou fermatas específicas
+      if (!stemUp) {
+        // Nota com haste para baixo: posicionar abaixo da extremidade da haste
+        final stemHeight = coordinates.staffSpace * 3.5;
+        final stemBottomY = noteY + stemHeight;
+        return stemBottomY + (coordinates.staffSpace * 0.8);
+      } else {
+        // Nota com haste para cima: posicionar abaixo da cabeça da nota
+        return noteY + baseDistance;
+      }
     }
   }
 
-  double _getOrnamentHorizontalPosition(OrnamentType type, double noteX) {
+  /// Posicionamento horizontal específico para ornamentos SMuFL
+  double _getOrnamentHorizontalPositionSMuFL(OrnamentType type, double noteX) {
     switch (type) {
       case OrnamentType.arpeggio:
-        // Arpejos à esquerda da nota
-        return noteX - (coordinates.staffSpace * 0.5);
+        // Arpejos: à esquerda da nota (padrão SMuFL)
+        return noteX - (coordinates.staffSpace * 0.8);
 
       case OrnamentType.appoggiaturaUp:
       case OrnamentType.appoggiaturaDown:
       case OrnamentType.acciaccatura:
-        // Apoggiaturas à esquerda da nota principal
-        return noteX - (coordinates.staffSpace * 0.8);
+        // Grace notes: à esquerda da nota principal
+        return noteX - (coordinates.staffSpace * 1.2);
 
       default:
-        // Demais ornamentos centralizados na nota
+        // Ornamentos padrão: centralizados na nota
         return noteX;
+    }
+  }
+
+  /// Renderização especial para ornamentos complexos
+  void _renderSpecialOrnament(
+    Canvas canvas,
+    Ornament ornament,
+    Note note,
+    Offset notePos,
+    int staffPosition,
+  ) {
+    switch (ornament.type) {
+      case OrnamentType.arpeggio:
+        _renderArpeggio(canvas, notePos, staffPosition);
+        break;
+
+      case OrnamentType.glissando:
+      case OrnamentType.portamento:
+        _renderGlissando(canvas, ornament.type, notePos, staffPosition);
+        break;
+
+      default:
+        // Para outros ornamentos especiais, usar renderização padrão
+        break;
+    }
+  }
+
+  /// Renderiza arpejo conforme padrões SMuFL
+  void _renderArpeggio(Canvas canvas, Offset notePos, int staffPosition) {
+    // Arpejo deve ser posicionado à esquerda da nota
+    final arpeggioX = notePos.dx - (coordinates.staffSpace * 1.0);
+
+    // Altura do símbolo de arpejo baseada na extensão da nota/acorde
+    // Para nota individual, usar altura padrão
+    final arpeggioHeight = coordinates.staffSpace * 3.0;
+    final startY = notePos.dy - (arpeggioHeight * 0.5);
+
+    // Desenhar múltiplos segmentos do símbolo wiggle
+    final segments = (arpeggioHeight / (coordinates.staffSpace * 0.5)).round();
+
+    for (int i = 0; i < segments; i++) {
+      final segmentY = startY + (i * coordinates.staffSpace * 0.5);
+
+      _drawGlyph(
+        canvas: canvas,
+        glyphName: 'wiggleArpeggiatoUp',
+        position: Offset(arpeggioX, segmentY),
+        size: glyphSize * 0.6,
+        color: theme.ornamentColor ?? theme.noteheadColor,
+        centerVertically: true,
+        centerHorizontally: true,
+      );
+    }
+  }
+
+  /// Renderiza glissando como linha
+  void _renderGlissando(
+    Canvas canvas,
+    OrnamentType type,
+    Offset startPos,
+    int staffPosition,
+  ) {
+    // Para glissando, precisaríamos da posição da nota de destino
+    // Por enquanto, desenhar uma linha curta como indicação
+    final endX = startPos.dx + (coordinates.staffSpace * 3.0);
+    final endY = type == OrnamentType.glissando
+        ? startPos.dy - (coordinates.staffSpace * 1.0)
+        : startPos.dy + (coordinates.staffSpace * 1.0);
+
+    // Desenhar linha ondulada usando múltiplos segmentos
+    final segments = 6;
+    final segmentWidth = (endX - startPos.dx) / segments;
+
+    for (int i = 0; i < segments; i++) {
+      final segmentX = startPos.dx + (i * segmentWidth);
+      final progress = i / (segments - 1);
+      final segmentY = startPos.dy + ((endY - startPos.dy) * progress);
+
+      _drawGlyph(
+        canvas: canvas,
+        glyphName: 'wiggleGlissando',
+        position: Offset(segmentX, segmentY),
+        size: glyphSize * 0.4,
+        color: theme.ornamentColor ?? theme.noteheadColor,
+        centerVertically: true,
+        centerHorizontally: true,
+      );
     }
   }
 

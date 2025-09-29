@@ -335,6 +335,10 @@ class Note extends MusicalElement {
   /// Técnicas especiais da nota
   final List<PlayingTechnique> techniques;
 
+  /// Número da voz para notação polifônica (1 = soprano, 2 = contralto, etc.)
+  /// null = voz única (padrão)
+  final int? voice;
+
   Note({
     required this.pitch,
     required this.duration,
@@ -345,6 +349,7 @@ class Note extends MusicalElement {
     this.ornaments = const [],
     this.dynamicElement,
     this.techniques = const [],
+    this.voice,
   });
 }
 

@@ -20,6 +20,8 @@ import 'examples/grace_notes_example.dart';
 import 'examples/slurs_ties_example.dart';
 import 'examples/tuplets_example.dart';
 import 'examples/flags_vs_beams_example.dart';
+import 'examples/professional_ornaments_example.dart';
+import 'examples/corrected_ornaments_example.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +79,9 @@ class _MainScreenState extends State<MainScreen> {
     'Apojaturas e Notas de Graça',
     'Ligaduras',
     'Quiálteras (Tuplets)',
+    'Bandeiras vs Barras',
+    'Ornamentos Profissionais',
+    'Ornamentos Corrigidos',
   ];
 
   final List<Widget> _pages = const [
@@ -96,6 +101,8 @@ class _MainScreenState extends State<MainScreen> {
     SlursTiesExample(),
     TupletsExample(),
     FlagsVsBeamsExample(),
+    ProfessionalOrnamentsExample(),
+    CorrectedOrnamentsExample(),
   ];
 
   @override
