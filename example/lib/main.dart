@@ -19,6 +19,7 @@ import 'examples/repeats_example.dart';
 import 'examples/grace_notes_example.dart';
 import 'examples/slurs_ties_example.dart';
 import 'examples/tuplets_example.dart';
+import 'examples/flags_vs_beams_example.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,6 +95,7 @@ class _MainScreenState extends State<MainScreen> {
     GraceNotesExample(),
     SlursTiesExample(),
     TupletsExample(),
+    FlagsVsBeamsExample(),
   ];
 
   @override

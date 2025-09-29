@@ -366,6 +366,25 @@ class Barline extends MusicalElement {}
 /// Representa um compasso, que contém elementos musicais.
 class Measure {
   final List<MusicalElement> elements = [];
+
+  /// Controla se as notas devem ser automaticamente agrupadas com beams
+  /// true = auto-beaming ativo (padrão)
+  /// false = usar bandeirolas individuais (flags)
+  bool autoBeaming;
+
+  /// Estratégia específica de beaming para casos especiais
+  BeamingMode beamingMode;
+
+  /// Grupos manuais de beams - lista de listas de índices de notas a serem agrupadas
+  /// Exemplo: [[0, 1, 2], [3, 4]] = agrupa notas 0,1,2 em um beam e 3,4 em outro
+  List<List<int>> manualBeamGroups;
+
+  Measure({
+    this.autoBeaming = true,
+    this.beamingMode = BeamingMode.automatic,
+    this.manualBeamGroups = const [],
+  });
+
   void add(MusicalElement element) => elements.add(element);
 
   /// Calcula o valor total atual das figuras musicais no compasso.
@@ -440,6 +459,24 @@ class Measure {
     if (ts == null) return double.infinity;
     return ts.measureValue - currentMusicalValue;
   }
+}
+
+/// Modos de beaming para controle fino do agrupamento
+enum BeamingMode {
+  /// Beaming automático baseado na fórmula de compasso (padrão)
+  automatic,
+
+  /// Forçar flags individuais (sem beams)
+  forceFlags,
+
+  /// Agrupar todas as notas possíveis em um único beam
+  forceBeamAll,
+
+  /// Beaming manual - usar apenas os grupos explicitamente definidos
+  manual,
+
+  /// Beaming conservador - apenas grupos óbvios (2 notas consecutivas)
+  conservative,
 }
 
 /// Representa uma pauta, que contém compassos.

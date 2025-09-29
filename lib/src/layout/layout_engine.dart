@@ -13,34 +13,102 @@ class PositionedElement {
   PositionedElement(this.element, this.position, {this.system = 0});
 }
 
+/// Cursor de layout que gerencia posicionamento e quebras de sistema
+class LayoutCursor {
+  final double staffSpace;
+  final double availableWidth;
+  final double systemMargin;
+  final double systemHeight;
+
+  double _currentX;
+  double _currentY;
+  int _currentSystem;
+  bool _isFirstMeasureInSystem;
+
+  LayoutCursor({
+    required this.staffSpace,
+    required this.availableWidth,
+    required this.systemMargin,
+    this.systemHeight = 10.0,
+  })  : _currentX = systemMargin,
+        _currentY = staffSpace * 4.0,
+        _currentSystem = 0,
+        _isFirstMeasureInSystem = true;
+
+  // Getters
+  double get currentX => _currentX;
+  double get currentY => _currentY;
+  int get currentSystem => _currentSystem;
+  bool get isFirstMeasureInSystem => _isFirstMeasureInSystem;
+  double get usableWidth => availableWidth - (systemMargin * 2);
+
+  /// Avança o cursor pela largura especificada
+  void advance(double width) {
+    _currentX += width;
+  }
+
+  /// Verifica se precisa de quebra de sistema
+  bool needsSystemBreak(double measureWidth) {
+    if (_isFirstMeasureInSystem) return false;
+    return _currentX + measureWidth > systemMargin + usableWidth;
+  }
+
+  /// Inicia um novo sistema
+  void startNewSystem() {
+    _currentSystem++;
+    _currentX = systemMargin;
+    _currentY += systemHeight * staffSpace;
+    _isFirstMeasureInSystem = true;
+  }
+
+  /// Adiciona uma barra de compasso
+  void addBarline(List<PositionedElement> elements) {
+    elements.add(PositionedElement(
+      Barline(),
+      Offset(_currentX, _currentY),
+      system: _currentSystem,
+    ));
+    advance(LayoutEngine.barlineSeparation * staffSpace);
+  }
+
+  /// Finaliza um compasso
+  void endMeasure() {
+    _isFirstMeasureInSystem = false;
+    advance(LayoutEngine.measureEndPadding * staffSpace);
+  }
+
+  /// Adiciona um elemento na posição atual
+  void addElement(MusicalElement element, List<PositionedElement> elements) {
+    elements.add(PositionedElement(
+      element,
+      Offset(_currentX, _currentY),
+      system: _currentSystem,
+    ));
+  }
+}
+
 /// Motor de layout responsável por calcular posições dos elementos musicais
+/// usando um sistema baseado em cursor para espaçamento consistente
 class LayoutEngine {
   final Staff staff;
   final double availableWidth;
   final double staffSpace;
 
   // Espaçamentos baseados no metadata oficial do Bravura (em staff spaces)
+  static const double gClefWidth = 2.684;
+  static const double fClefWidth = 2.756;
+  static const double cClefWidth = 2.796;
+  static const double noteheadBlackWidth = 1.18;
+  static const double accidentalSharpWidth = 1.116;
+  static const double accidentalFlatWidth = 1.18;
+  static const double barlineSeparation = 0.4;
+  static const double legerLineExtension = 0.4;
 
-  // Larguras oficiais dos glifos do Bravura metadata
-  static const double gClefWidth = 2.684; // gClef bounding box width
-  static const double fClefWidth =
-      2.756; // fClef bounding box width (2.736 - (-0.02))
-  static const double cClefWidth = 2.796; // cClef bounding box width
-  static const double noteheadBlackWidth = 1.18; // noteheadBlack official width
-  static const double accidentalSharpWidth = 1.116; // accidentalSharp width
-  static const double accidentalFlatWidth = 1.18; // accidentalFlat width
-
-  // Valores oficiais do metadata Bravura engravingDefaults
-  static const double barlineSeparation = 0.4; // barlineSeparation oficial
-  static const double legerLineExtension = 0.4; // legerLineExtension oficial
-
-  // --- As variáveis abaixo são regras de layout e não valores diretos do SMuFL ---
-
-  // Um valor estilístico para o respiro mínimo entre as notas. 2.0 é uma boa escolha.
-  static const double minNoteSpacing = 2.0;
-
-  // Um valor estilístico para o preenchimento do compasso. 1.5 é uma boa escolha.
-  static const double measurePadding = 1.5;
+  // Configurações de espaçamento simplificadas
+  static const double systemMargin = 2.0;
+  static const double measureMinWidth = 4.0;
+  static const double noteMinSpacing = 1.5;
+  static const double measureEndPadding = 1.0;
 
   LayoutEngine(
     this.staff, {
@@ -48,167 +116,139 @@ class LayoutEngine {
     this.staffSpace = 12.0,
   });
 
-  /// Calcula o layout de todos os elementos
+  /// Calcula o layout de todos os elementos usando sistema baseado em cursor
   List<PositionedElement> layout() {
+    final cursor = LayoutCursor(
+      staffSpace: staffSpace,
+      availableWidth: availableWidth,
+      systemMargin: systemMargin * staffSpace,
+    );
+
     final List<PositionedElement> positionedElements = [];
 
-    // Configurações de margem e espaçamento
-    final double leftMargin = staffSpace * 2.0;
-    final double rightMargin = staffSpace * 2.0;
-    final double usableWidth = availableWidth - leftMargin - rightMargin;
-    final double systemHeight = staffSpace * 10.0; // Altura entre sistemas
-
-    double currentX = leftMargin;
-    double currentY = staffSpace * 4.0; // Centro da primeira pauta
-    int currentSystem = 0;
-
-    // Flag para saber se é o primeiro compasso do sistema
-    bool firstMeasureInSystem = true;
-
     // Processar cada compasso
-    for (
-      int measureIndex = 0;
-      measureIndex < staff.measures.length;
-      measureIndex++
-    ) {
-      final measure = staff.measures[measureIndex];
+    for (int i = 0; i < staff.measures.length; i++) {
+      final measure = staff.measures[i];
+      final isFirst = cursor.isFirstMeasureInSystem;
+      final isLast = i == staff.measures.length - 1;
 
-      // Calcular largura necessária para este compasso
-      final measureWidth = _calculateMeasureWidth(
-        measure,
-        firstMeasureInSystem,
-      );
+      // Calcular largura necessária do compasso
+      final measureWidth = _calculateMeasureWidthCursor(measure, isFirst);
 
-      // Verificar se precisa quebrar linha (novo sistema)
-      if (!firstMeasureInSystem &&
-          currentX + measureWidth > leftMargin + usableWidth) {
-        // Iniciar novo sistema
-        currentSystem++;
-        currentX = leftMargin;
-        currentY += systemHeight;
-        firstMeasureInSystem = true;
+      // Verificar quebra de sistema
+      if (cursor.needsSystemBreak(measureWidth)) {
+        cursor.startNewSystem();
       }
 
-      // Layout do compasso
-      currentX = _layoutMeasure(
+      // Layout do compasso usando cursor
+      _layoutMeasureCursor(
         measure,
+        cursor,
         positionedElements,
-        currentX,
-        currentY,
-        currentSystem,
-        firstMeasureInSystem,
+        isFirst,
       );
 
-      // Adicionar barra de compasso (exceto no último compasso)
-      if (measureIndex < staff.measures.length - 1) {
-        positionedElements.add(
-          PositionedElement(
-            Barline(),
-            Offset(currentX, currentY),
-            system: currentSystem,
-          ),
-        );
-        currentX += barlineSeparation * staffSpace;
+      // Adicionar barra de compasso se não for o último
+      if (!isLast) {
+        cursor.addBarline(positionedElements);
       }
 
-      // Adicionar espaçamento entre compassos
-      currentX += measurePadding * staffSpace;
-
-      firstMeasureInSystem = false;
+      cursor.endMeasure();
     }
 
     return positionedElements;
   }
 
-  /// Calcula a largura necessária para um compasso de forma inteligente
-  double _calculateMeasureWidth(Measure measure, bool isFirstInSystem) {
-    double baseWidth = 0;
-    int noteCount = 0;
-    double totalDurationValue = 0;
+  /// Calcula a largura necessária para um compasso (versão simplificada)
+  double _calculateMeasureWidthCursor(Measure measure, bool isFirstInSystem) {
+    double totalWidth = 0;
+    int musicalElementCount = 0;
 
-    // Processar elementos considerando se é o primeiro compasso
-    for (int i = 0; i < measure.elements.length; i++) {
-      final element = measure.elements[i];
-
+    for (final element in measure.elements) {
       // Pular elementos de sistema se não for o primeiro compasso
       if (!isFirstInSystem && _isSystemElement(element)) {
         continue;
       }
 
-      baseWidth += _getElementWidth(element);
+      totalWidth += _getElementWidthSimple(element);
 
-      // Contar elementos musicais para análise de densidade
-      if (element is Note) {
-        noteCount++;
-        totalDurationValue += element.duration.realValue;
-      } else if (element is Chord) {
-        noteCount++;
-        totalDurationValue += element.duration.realValue;
-      } else if (element is Rest) {
-        noteCount++;
-        totalDurationValue += element.duration.realValue;
+      // Contar elementos musicais para espaçamento
+      if (element is Note || element is Rest || element is Chord) {
+        musicalElementCount++;
       }
     }
 
-    // Sistema inteligente de espaçamento baseado na densidade
-    double intelligentWidth = _calculateIntelligentSpacing(
-      baseWidth,
-      noteCount,
-      totalDurationValue,
-      isFirstInSystem,
-    );
+    // Adicionar espaçamento entre elementos musicais
+    if (musicalElementCount > 1) {
+      totalWidth += (musicalElementCount - 1) * noteMinSpacing * staffSpace;
+    }
 
-    return intelligentWidth;
+    // Garantir largura mínima
+    final minWidth = measureMinWidth * staffSpace;
+    return totalWidth < minWidth ? minWidth : totalWidth;
   }
 
-  /// Calcula espaçamento inteligente baseado na densidade musical
-  double _calculateIntelligentSpacing(
-    double baseWidth,
-    int noteCount,
-    double totalDurationValue,
+  /// Layout de um compasso usando o sistema de cursor
+  void _layoutMeasureCursor(
+    Measure measure,
+    LayoutCursor cursor,
+    List<PositionedElement> positionedElements,
     bool isFirstInSystem,
   ) {
-    // Largura mínima base - considerar espaçamentos inicial e final
-    double minWidth = isFirstInSystem
-        ? staffSpace *
-              8 // Primeiro compasso: clave + armadura + tempo + espaço
-        : staffSpace *
-              4.5; // Compassos subsequentes: espaço inicial + conteúdo + espaço final
+    // Processar elementos considerando beams com configurações do compasso
+    final processedElements = _processBeams(
+      measure.elements,
+      autoBeaming: measure.autoBeaming,
+      beamingMode: measure.beamingMode,
+      manualBeamGroups: measure.manualBeamGroups,
+    );
 
-    // Fator de densidade: mais notas = mais espaço necessário
-    double densityFactor = 1.0;
-    if (noteCount > 0) {
-      // Calcular densidade média (durações menores = maior densidade)
-      double averageDuration = totalDurationValue / noteCount;
+    // Filtrar elementos que serão renderizados
+    final elementsToRender = processedElements.where((element) {
+      return isFirstInSystem || !_isSystemElement(element);
+    }).toList();
 
-      // Fator baseado na duração média das notas
-      if (averageDuration <= 0.25) {
-        // Semicolcheias e menores
-        densityFactor = 1.8;
-      } else if (averageDuration <= 0.5) {
-        // Colcheias
-        densityFactor = 1.5;
-      } else if (averageDuration <= 1.0) {
-        // Semínimas
-        densityFactor = 1.2;
+    if (elementsToRender.isEmpty) return;
+
+    // Separar elementos de sistema dos musicais
+    final systemElements = <MusicalElement>[];
+    final musicalElements = <MusicalElement>[];
+
+    for (final element in elementsToRender) {
+      if (_isSystemElement(element)) {
+        systemElements.add(element);
       } else {
-        // Mínimas e maiores
-        densityFactor = 1.0;
-      }
-
-      // Ajuste adicional para quantidade de elementos
-      if (noteCount > 8) {
-        densityFactor *= 1.3;
-      } else if (noteCount > 4) {
-        densityFactor *= 1.15;
+        musicalElements.add(element);
       }
     }
 
-    // Aplicar fator de densidade à largura base
-    double adjustedWidth = baseWidth * densityFactor;
+    // 1. Posicionar elementos de sistema primeiro
+    for (final element in systemElements) {
+      cursor.addElement(element, positionedElements);
+      cursor.advance(_getElementWidthSimple(element));
+    }
 
-    // Garantir largura mínima para legibilidade
-    return adjustedWidth < minWidth ? minWidth : adjustedWidth;
+    // Adicionar espaçamento inteligente após elementos de sistema
+    if (systemElements.isNotEmpty) {
+      final spacingAfterSystem = _calculateSpacingAfterSystemElements(
+        systemElements,
+        musicalElements,
+      );
+      cursor.advance(spacingAfterSystem);
+    }
+
+    // 2. Posicionar elementos musicais com espaçamento consistente
+    for (int i = 0; i < musicalElements.length; i++) {
+      final element = musicalElements[i];
+
+      // Adicionar espaçamento antes do elemento (exceto o primeiro)
+      if (i > 0) {
+        cursor.advance(noteMinSpacing * staffSpace);
+      }
+
+      cursor.addElement(element, positionedElements);
+      cursor.advance(_getElementWidthSimple(element));
+    }
   }
 
   /// Verifica se é um elemento de sistema (clave, armadura, fórmula)
@@ -218,10 +258,44 @@ class LayoutEngine {
         element is TimeSignature;
   }
 
-  /// Calcula a largura de um elemento específico usando valores oficiais Bravura
-  double _getElementWidth(MusicalElement element) {
+  /// Calcula espaçamento inteligente após elementos de sistema
+  double _calculateSpacingAfterSystemElements(
+    List<MusicalElement> systemElements,
+    List<MusicalElement> musicalElements,
+  ) {
+    // Espaçamento base após elementos de sistema
+    double baseSpacing = staffSpace * 1.5; // Aumentado de 1.0 para 1.5
+
+    // Verificar se há clave (elemento mais provável de causar sobreposição)
+    bool hasClef = systemElements.any((e) => e is Clef);
+    if (hasClef) {
+      baseSpacing = staffSpace * 2.0; // Espaço extra após clave
+    }
+
+    // Verificar se há armadura de clave com muitos acidentes
+    for (final element in systemElements) {
+      if (element is KeySignature && element.count.abs() >= 4) {
+        baseSpacing += staffSpace * 0.5; // Espaço extra para armaduras complexas
+      }
+    }
+
+    // Verificar se a primeira nota musical tem acidente
+    if (musicalElements.isNotEmpty) {
+      final firstMusicalElement = musicalElements.first;
+      if (firstMusicalElement is Note && firstMusicalElement.pitch.accidentalGlyph != null) {
+        // Adicionar espaço extra para evitar sobreposição do acidente com a clave
+        baseSpacing += staffSpace * 1.0;
+      }
+    }
+
+    // Espaçamento mínimo e máximo para manter proporções
+    return baseSpacing.clamp(staffSpace * 1.5, staffSpace * 4.0);
+  }
+
+  /// Calcula largura simplificada de um elemento
+  double _getElementWidthSimple(MusicalElement element) {
     if (element is Clef) {
-      // Usar largura correta baseada no tipo de clave
+      // Largura do glifo + espaçamento após a clave
       double clefWidth;
       switch (element.actualClefType) {
         case ClefType.treble:
@@ -239,269 +313,46 @@ class LayoutEngine {
         case ClefType.bass15mb:
           clefWidth = fClefWidth;
           break;
-        case ClefType.soprano:
-        case ClefType.mezzoSoprano:
-        case ClefType.alto:
-        case ClefType.tenor:
-        case ClefType.baritone:
-        case ClefType.c8vb:
-          clefWidth = cClefWidth;
-          break;
         default:
-          clefWidth = gClefWidth;
+          clefWidth = cClefWidth;
       }
-      return (clefWidth + 0.5) * staffSpace; // Clave + espaço oficial
-    } else if (element is KeySignature) {
-      if (element.count == 0) {
-        return 0.3 * staffSpace; // Espaço mínimo sem acidentes
-      }
-      // Usar largura oficial dos acidentes + espaçamento compacto
-      final isSharp = element.count > 0;
-      final accidentalWidth = isSharp
+      // Adicionar pequeno espaçamento após a clave (0.5 staff spaces)
+      return (clefWidth + 0.5) * staffSpace;
+    }
+
+    if (element is KeySignature) {
+      if (element.count == 0) return 0.5 * staffSpace;
+      final accidentalWidth = element.count > 0
           ? accidentalSharpWidth
           : accidentalFlatWidth;
-      final spacing = 0.8; // Espaçamento padrão entre acidentes
-      // Espaçamento mais compacto após a armadura
-      return (element.count.abs() * spacing + accidentalWidth + 0.3) *
-          staffSpace;
-    } else if (element is TimeSignature) {
-      return 4.5 *
-          staffSpace; // Fórmula de compasso + espaço generoso para primeira nota
-    } else if (element is Note) {
-      double width = 0;
-
-      // Espaço para acidente se presente (valor oficial)
-      if (element.pitch.accidentalGlyph != null) {
-        final accidentalWidth = element.pitch.accidentalGlyph!.contains('Sharp')
-            ? accidentalSharpWidth
-            : accidentalFlatWidth;
-        width += (accidentalWidth + 0.3) * staffSpace; // Acidente + espaçamento
-      }
-
-      // Largura oficial da cabeça da nota
-      width += noteheadBlackWidth * staffSpace;
-
-      // Espaçamento baseado na duração
-      width += _getDurationSpacing(element.duration) * staffSpace;
-
-      return width;
-    } else if (element is Rest) {
-      // Pausas precisam de espaço baseado na duração
-      return (1.0 + _getDurationSpacing(element.duration)) * staffSpace;
-    } else if (element is Chord) {
-      double width = noteheadBlackWidth * staffSpace;
-
-      // Verificar se alguma nota tem acidente e usar largura correta
-      bool hasAccidental = false;
-      double maxAccidentalWidth = 0;
-      for (final note in element.notes) {
-        if (note.pitch.accidentalGlyph != null) {
-          hasAccidental = true;
-          final accWidth = note.pitch.accidentalGlyph!.contains('Sharp')
-              ? accidentalSharpWidth
-              : accidentalFlatWidth;
-          if (accWidth > maxAccidentalWidth) {
-            maxAccidentalWidth = accWidth;
-          }
-        }
-      }
-
-      if (hasAccidental) {
-        width += (maxAccidentalWidth + 0.3) * staffSpace;
-      }
-
-      width += _getDurationSpacing(element.duration) * staffSpace;
-      return width;
-    } else if (element is Dynamic) {
-      return 2.0 * staffSpace;
-    } else if (element is Ornament) {
-      return 1.0 * staffSpace;
+      return (element.count.abs() * 0.8 + accidentalWidth) * staffSpace;
     }
 
-    return staffSpace; // Valor padrão para elementos não reconhecidos
-  }
-
-  /// Retorna o espaçamento baseado na duração real (incluindo pontos)
-  double _getDurationSpacing(Duration duration) {
-    // Espaçamento baseado na duração real, com ajuste logarítmico para visualização
-    final realValue = duration.realValue;
-
-    // Fórmula logarítmica: quanto maior a duração, mais espaço (mas não linear)
-    // Base: semínima (0.25) = 2.0 staff spaces
-    double spacing = 2.0 * (realValue / 0.25);
-
-    // Aplicar compressão logarítmica para evitar espaços excessivos
-    spacing = 1.0 + (spacing - 1.0) * 0.7;
-
-    // Limitar valores mínimos e máximos
-    return spacing.clamp(1.0, 5.0);
-  }
-
-  /// Layout de um compasso completo com distribuição inteligente
-  double _layoutMeasure(
-    Measure measure,
-    List<PositionedElement> positionedElements,
-    double startX,
-    double y,
-    int system,
-    bool isFirstInSystem,
-  ) {
-    // Processar elementos considerando beams
-    final processedElements = _processBeams(measure.elements);
-
-    // Filtrar elementos que serão renderizados
-    final elementsToRender = processedElements.where((element) {
-      return isFirstInSystem || !_isSystemElement(element);
-    }).toList();
-
-    if (elementsToRender.isEmpty) return startX;
-
-    // Calcular largura total do compasso
-    final totalMeasureWidth = _calculateMeasureWidth(measure, isFirstInSystem);
-
-    // Separar elementos de sistema dos elementos musicais
-    final systemElements = <MusicalElement>[];
-    final musicalElements = <MusicalElement>[];
-
-    for (final element in elementsToRender) {
-      if (_isSystemElement(element)) {
-        systemElements.add(element);
-      } else {
-        musicalElements.add(element);
-      }
+    if (element is TimeSignature) {
+      return 3.0 * staffSpace;
     }
 
-    double currentX = startX;
-
-    // 1. Posicionar elementos de sistema primeiro (clave, armadura, tempo)
-    // E ADICIONAR O ESPAÇAMENTO INICIAL QUANDO NECESSÁRIO
-    for (final element in systemElements) {
-      positionedElements.add(
-        PositionedElement(element, Offset(currentX, y), system: system),
-      );
-      currentX += _getElementWidth(element);
-    }
-
-    // ** AQUI ESTÁ A CORREÇÃO **
-    // Se for o primeiro compasso do sistema, mas NÃO tiver armadura ou fórmula,
-    // adicione um espaçamento padrão após a clave.
-    if (isFirstInSystem &&
-        !systemElements.any((e) => e is KeySignature || e is TimeSignature)) {
-      // Verifica se há pelo menos uma clave para não adicionar espaço extra desnecessário
-      if (systemElements.any((e) => e is Clef)) {
-        currentX += staffSpace * 2.0; // Espaçamento padrão
-      }
-    }
-
-    // 2. Distribuir elementos musicais proporcionalmente no espaço restante
-    if (musicalElements.isNotEmpty) {
-      // Adicionar espaçamento inicial para todos os compassos (não só o primeiro)
-      final initialSpacing = isFirstInSystem
-          ? 0
-          : staffSpace * 1.5; // Espaço após barra de compasso
-
-      // Espaçamento final muito reduzido para evitar excesso antes da barra
-      final noteCount = musicalElements
-          .where((e) => e is Note || e.runtimeType.toString() == 'Chord')
-          .length;
-      double finalSpacing;
-
-      if (noteCount >= 6) {
-        finalSpacing =
-            staffSpace * 0.15; // Compassos densos: espaçamento mínimo
-      } else if (noteCount >= 4) {
-        finalSpacing = staffSpace * 0.2; // Densidade média
-      } else if (noteCount >= 2) {
-        finalSpacing = staffSpace * 0.25; // Poucos elementos
-      } else {
-        finalSpacing = staffSpace * 0.3; // Compasso muito simples
-      }
-
-      currentX += initialSpacing;
-
-      // Calcular espaço disponível considerando o espaçamento final
-      final availableSpace =
-          totalMeasureWidth - (currentX - startX) - finalSpacing;
-      final spaceBetweenNotes = _calculateOptimalSpacing(
-        musicalElements,
-        availableSpace,
-      );
-
-      for (int i = 0; i < musicalElements.length; i++) {
-        final element = musicalElements[i];
-
-        // Aplicar espaçamento proporcional
-        if (i > 0) {
-          currentX += spaceBetweenNotes;
-        }
-
-        positionedElements.add(
-          PositionedElement(element, Offset(currentX, y), system: system),
-        );
-
-        // Avançar pela largura mínima do elemento
-        currentX += _getMinimalElementWidth(element);
-      }
-
-      // Adicionar espaçamento no final do compasso para garantir distância da próxima barra
-      currentX += finalSpacing;
-    }
-
-    return startX + totalMeasureWidth;
-  }
-
-  /// Calcula espaçamento ótimo entre elementos musicais
-  double _calculateOptimalSpacing(
-    List<MusicalElement> elements,
-    double availableSpace,
-  ) {
-    if (elements.length <= 1) return 0;
-
-    // Calcular largura mínima total dos elementos
-    double totalMinimalWidth = 0;
-    for (final element in elements) {
-      totalMinimalWidth += _getMinimalElementWidth(element);
-    }
-
-    // Espaço disponível para distribuição
-    final spaceForDistribution = availableSpace - totalMinimalWidth;
-    final gaps = elements.length - 1;
-
-    if (gaps <= 0 || spaceForDistribution <= 0) {
-      return staffSpace * 0.5; // Espaçamento mínimo
-    }
-
-    // Distribuir espaço uniformemente, com limites
-    double spacing = spaceForDistribution / gaps;
-
-    // Limites de espaçamento para manter legibilidade
-    final minSpacing = staffSpace * 0.8;
-    final maxSpacing = staffSpace * 4.0;
-
-    return spacing.clamp(minSpacing, maxSpacing);
-  }
-
-  /// Retorna largura mínima de um elemento (sem espaçamento extra)
-  double _getMinimalElementWidth(MusicalElement element) {
     if (element is Note) {
       double width = noteheadBlackWidth * staffSpace;
       if (element.pitch.accidentalGlyph != null) {
-        final accidentalWidth = element.pitch.accidentalGlyph!.contains('Sharp')
+        final accWidth = element.pitch.accidentalGlyph!.contains('Sharp')
             ? accidentalSharpWidth
             : accidentalFlatWidth;
-        width += (accidentalWidth + 0.3) * staffSpace;
+        width += (accWidth + 0.3) * staffSpace;
       }
       return width;
-    } else if (element is Rest) {
-      return staffSpace;
-    } else if (element is Chord) {
+    }
+
+    if (element is Rest) {
+      return 1.5 * staffSpace;
+    }
+
+    if (element is Chord) {
       double width = noteheadBlackWidth * staffSpace;
-      bool hasAccidental = false;
       double maxAccidentalWidth = 0;
 
       for (final note in element.notes) {
         if (note.pitch.accidentalGlyph != null) {
-          hasAccidental = true;
           final accWidth = note.pitch.accidentalGlyph!.contains('Sharp')
               ? accidentalSharpWidth
               : accidentalFlatWidth;
@@ -511,17 +362,25 @@ class LayoutEngine {
         }
       }
 
-      if (hasAccidental) {
+      if (maxAccidentalWidth > 0) {
         width += (maxAccidentalWidth + 0.3) * staffSpace;
       }
       return width;
     }
 
-    return staffSpace * 0.5; // Padrão para outros elementos
+    if (element is Dynamic) return 2.0 * staffSpace;
+    if (element is Ornament) return 1.0 * staffSpace;
+
+    return staffSpace; // Padrão
   }
 
+
   /// Processa grupos de notas com barras de ligação (beams) usando lógica inteligente
-  List<MusicalElement> _processBeams(List<MusicalElement> elements) {
+  List<MusicalElement> _processBeams(List<MusicalElement> elements, {
+    bool autoBeaming = true,
+    BeamingMode beamingMode = BeamingMode.automatic,
+    List<List<int>> manualBeamGroups = const [],
+  }) {
     // Encontrar fórmula de compasso no compasso
     TimeSignature? timeSignature;
     for (final element in elements) {
@@ -538,8 +397,14 @@ class LayoutEngine {
 
     if (notes.isEmpty) return elements;
 
-    // Usar nova lógica inteligente de agrupamento
-    final beamGroups = BeamGrouper.groupNotesForBeaming(notes, timeSignature);
+    // Usar nova lógica inteligente de agrupamento com controles
+    final beamGroups = BeamGrouper.groupNotesForBeaming(
+      notes,
+      timeSignature,
+      autoBeaming: autoBeaming,
+      beamingMode: beamingMode,
+      manualBeamGroups: manualBeamGroups,
+    );
 
     // Aplicar agrupamento de beams às notas originais
     final processedElements = <MusicalElement>[];
@@ -622,58 +487,4 @@ class LayoutEngine {
     return topMargin + ((maxSystem + 1) * systemHeight) + bottomMargin;
   }
 
-  /// Otimiza o espaçamento para distribuir melhor os elementos
-  List<PositionedElement> optimizeSpacing(List<PositionedElement> elements) {
-    if (elements.isEmpty) return elements;
-
-    final Map<int, List<PositionedElement>> systemGroups = {};
-
-    // Agrupar por sistema
-    for (final element in elements) {
-      systemGroups.putIfAbsent(element.system, () => []).add(element);
-    }
-
-    final List<PositionedElement> optimized = [];
-
-    // Otimizar cada sistema
-    for (final entry in systemGroups.entries) {
-      final systemElements = entry.value;
-      if (systemElements.isEmpty) continue;
-
-      // Encontrar início e fim do sistema
-      double minX = double.infinity;
-      double maxX = double.negativeInfinity;
-
-      for (final element in systemElements) {
-        if (element.position.dx < minX) minX = element.position.dx;
-        if (element.position.dx > maxX) maxX = element.position.dx;
-      }
-
-      // Calcular fator de expansão se necessário
-      final systemWidth = maxX - minX;
-      final targetWidth =
-          availableWidth - (staffSpace * 4); // Margem de segurança
-
-      if (systemWidth < targetWidth * 0.6) {
-        // Sistema muito comprimido, expandir
-        final scaleFactor = (targetWidth * 0.8) / systemWidth;
-
-        for (final element in systemElements) {
-          final newX = minX + ((element.position.dx - minX) * scaleFactor);
-          optimized.add(
-            PositionedElement(
-              element.element,
-              Offset(newX, element.position.dy),
-              system: element.system,
-            ),
-          );
-        }
-      } else {
-        // Sistema OK, manter como está
-        optimized.addAll(systemElements);
-      }
-    }
-
-    return optimized;
-  }
 }

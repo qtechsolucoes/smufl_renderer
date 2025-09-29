@@ -6,26 +6,47 @@ import '../music_model/musical_element.dart';
 /// seguindo as regras musicais tradicionais baseadas na fórmula de compasso
 class BeamGrouper {
 
-  /// Agrupa notas em beams baseado na fórmula de compasso
+  /// Agrupa notas em beams baseado na fórmula de compasso e configurações do compasso
   static List<BeamGroup> groupNotesForBeaming(
     List<Note> notes,
-    TimeSignature timeSignature,
-  ) {
+    TimeSignature timeSignature, {
+    bool autoBeaming = true,
+    BeamingMode beamingMode = BeamingMode.automatic,
+    List<List<int>> manualBeamGroups = const [],
+  }) {
     final groups = <BeamGroup>[];
     final beamableNotes = notes.where(_isBeamable).toList();
 
     if (beamableNotes.isEmpty) return groups;
 
-    // Determinar estratégia de agrupamento baseado na fórmula de compasso
-    final strategy = _getGroupingStrategy(timeSignature);
+    // Verificar se beaming está desabilitado
+    if (!autoBeaming || beamingMode == BeamingMode.forceFlags) {
+      return groups; // Retorna lista vazia = usar flags individuais
+    }
 
-    switch (strategy) {
-      case BeamingStrategy.simple:
-        return _groupSimpleTime(beamableNotes, timeSignature);
-      case BeamingStrategy.compound:
-        return _groupCompoundTime(beamableNotes, timeSignature);
-      case BeamingStrategy.irregular:
-        return _groupIrregularTime(beamableNotes, timeSignature);
+    // Aplicar modo de beaming específico
+    switch (beamingMode) {
+      case BeamingMode.forceBeamAll:
+        return _groupAllNotes(beamableNotes);
+
+      case BeamingMode.conservative:
+        return _groupConservative(beamableNotes);
+
+      case BeamingMode.manual:
+        return _groupManual(beamableNotes, manualBeamGroups);
+
+      case BeamingMode.automatic:
+      default:
+        // Usar estratégia automática baseada na fórmula de compasso
+        final strategy = _getGroupingStrategy(timeSignature);
+        switch (strategy) {
+          case BeamingStrategy.simple:
+            return _groupSimpleTime(beamableNotes, timeSignature);
+          case BeamingStrategy.compound:
+            return _groupCompoundTime(beamableNotes, timeSignature);
+          case BeamingStrategy.irregular:
+            return _groupIrregularTime(beamableNotes, timeSignature);
+        }
     }
   }
 
@@ -227,6 +248,52 @@ class BeamGrouper {
   static bool _isEndOfCompoundBeat(double position, double beatUnit) {
     const tolerance = 0.0001;
     return (position % beatUnit).abs() < tolerance;
+  }
+
+  /// Agrupa todas as notas possíveis em um único beam
+  static List<BeamGroup> _groupAllNotes(List<Note> notes) {
+    if (notes.length < 2) return [];
+    return [BeamGroup(notes: notes)];
+  }
+
+  /// Agrupamento conservador - apenas grupos óbvios de 2 notas consecutivas
+  static List<BeamGroup> _groupConservative(List<Note> notes) {
+    final groups = <BeamGroup>[];
+
+    for (int i = 0; i < notes.length - 1; i += 2) {
+      final currentNote = notes[i];
+      final nextNote = notes[i + 1];
+
+      // Agrupar apenas se ambas têm duração igual
+      if (currentNote.duration.type == nextNote.duration.type) {
+        groups.add(BeamGroup(notes: [currentNote, nextNote]));
+      }
+    }
+
+    return groups;
+  }
+
+  /// Agrupamento manual baseado em índices especificados
+  static List<BeamGroup> _groupManual(List<Note> notes, List<List<int>> manualGroups) {
+    final groups = <BeamGroup>[];
+
+    for (final groupIndices in manualGroups) {
+      if (groupIndices.length < 2) continue; // Precisa de pelo menos 2 notas
+
+      final groupNotes = <Note>[];
+      for (final index in groupIndices) {
+        if (index >= 0 && index < notes.length) {
+          groupNotes.add(notes[index]);
+        }
+      }
+
+      // Só criar o grupo se todas as notas forem beamáveis e tivermos pelo menos 2
+      if (groupNotes.length >= 2 && groupNotes.every(_isBeamable)) {
+        groups.add(BeamGroup(notes: groupNotes));
+      }
+    }
+
+    return groups;
   }
 }
 
