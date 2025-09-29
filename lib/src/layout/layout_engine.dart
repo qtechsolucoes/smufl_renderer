@@ -23,7 +23,8 @@ class LayoutEngine {
 
   // Larguras oficiais dos glifos do Bravura metadata
   static const double gClefWidth = 2.684; // gClef bounding box width
-  static const double fClefWidth = 2.756; // fClef bounding box width (2.736 - (-0.02))
+  static const double fClefWidth =
+      2.756; // fClef bounding box width (2.736 - (-0.02))
   static const double cClefWidth = 2.796; // cClef bounding box width
   static const double noteheadBlackWidth = 1.18; // noteheadBlack official width
   static const double accidentalSharpWidth = 1.116; // accidentalSharp width
@@ -169,8 +170,10 @@ class LayoutEngine {
   ) {
     // Largura mínima base - considerar espaçamentos inicial e final
     double minWidth = isFirstInSystem
-        ? staffSpace * 8   // Primeiro compasso: clave + armadura + tempo + espaço
-        : staffSpace * 4.5; // Compassos subsequentes: espaço inicial + conteúdo + espaço final
+        ? staffSpace *
+              8 // Primeiro compasso: clave + armadura + tempo + espaço
+        : staffSpace *
+              4.5; // Compassos subsequentes: espaço inicial + conteúdo + espaço final
 
     // Fator de densidade: mais notas = mais espaço necessário
     double densityFactor = 1.0;
@@ -179,13 +182,17 @@ class LayoutEngine {
       double averageDuration = totalDurationValue / noteCount;
 
       // Fator baseado na duração média das notas
-      if (averageDuration <= 0.25) { // Semicolcheias e menores
+      if (averageDuration <= 0.25) {
+        // Semicolcheias e menores
         densityFactor = 1.8;
-      } else if (averageDuration <= 0.5) { // Colcheias
+      } else if (averageDuration <= 0.5) {
+        // Colcheias
         densityFactor = 1.5;
-      } else if (averageDuration <= 1.0) { // Semínimas
+      } else if (averageDuration <= 1.0) {
+        // Semínimas
         densityFactor = 1.2;
-      } else { // Mínimas e maiores
+      } else {
+        // Mínimas e maiores
         densityFactor = 1.0;
       }
 
@@ -250,12 +257,16 @@ class LayoutEngine {
       }
       // Usar largura oficial dos acidentes + espaçamento compacto
       final isSharp = element.count > 0;
-      final accidentalWidth = isSharp ? accidentalSharpWidth : accidentalFlatWidth;
+      final accidentalWidth = isSharp
+          ? accidentalSharpWidth
+          : accidentalFlatWidth;
       final spacing = 0.8; // Espaçamento padrão entre acidentes
       // Espaçamento mais compacto após a armadura
-      return (element.count.abs() * spacing + accidentalWidth + 0.3) * staffSpace;
+      return (element.count.abs() * spacing + accidentalWidth + 0.3) *
+          staffSpace;
     } else if (element is TimeSignature) {
-      return 4.5 * staffSpace; // Fórmula de compasso + espaço generoso para primeira nota
+      return 4.5 *
+          staffSpace; // Fórmula de compasso + espaço generoso para primeira nota
     } else if (element is Note) {
       double width = 0;
 
@@ -363,6 +374,7 @@ class LayoutEngine {
     double currentX = startX;
 
     // 1. Posicionar elementos de sistema primeiro (clave, armadura, tempo)
+    // E ADICIONAR O ESPAÇAMENTO INICIAL QUANDO NECESSÁRIO
     for (final element in systemElements) {
       positionedElements.add(
         PositionedElement(element, Offset(currentX, y), system: system),
@@ -370,17 +382,33 @@ class LayoutEngine {
       currentX += _getElementWidth(element);
     }
 
+    // ** AQUI ESTÁ A CORREÇÃO **
+    // Se for o primeiro compasso do sistema, mas NÃO tiver armadura ou fórmula,
+    // adicione um espaçamento padrão após a clave.
+    if (isFirstInSystem &&
+        !systemElements.any((e) => e is KeySignature || e is TimeSignature)) {
+      // Verifica se há pelo menos uma clave para não adicionar espaço extra desnecessário
+      if (systemElements.any((e) => e is Clef)) {
+        currentX += staffSpace * 2.0; // Espaçamento padrão
+      }
+    }
+
     // 2. Distribuir elementos musicais proporcionalmente no espaço restante
     if (musicalElements.isNotEmpty) {
       // Adicionar espaçamento inicial para todos os compassos (não só o primeiro)
-      final initialSpacing = isFirstInSystem ? 0 : staffSpace * 1.5; // Espaço após barra de compasso
+      final initialSpacing = isFirstInSystem
+          ? 0
+          : staffSpace * 1.5; // Espaço após barra de compasso
 
       // Espaçamento final muito reduzido para evitar excesso antes da barra
-      final noteCount = musicalElements.where((e) => e is Note || e.runtimeType.toString() == 'Chord').length;
+      final noteCount = musicalElements
+          .where((e) => e is Note || e.runtimeType.toString() == 'Chord')
+          .length;
       double finalSpacing;
 
       if (noteCount >= 6) {
-        finalSpacing = staffSpace * 0.15; // Compassos densos: espaçamento mínimo
+        finalSpacing =
+            staffSpace * 0.15; // Compassos densos: espaçamento mínimo
       } else if (noteCount >= 4) {
         finalSpacing = staffSpace * 0.2; // Densidade média
       } else if (noteCount >= 2) {
@@ -392,7 +420,8 @@ class LayoutEngine {
       currentX += initialSpacing;
 
       // Calcular espaço disponível considerando o espaçamento final
-      final availableSpace = totalMeasureWidth - (currentX - startX) - finalSpacing;
+      final availableSpace =
+          totalMeasureWidth - (currentX - startX) - finalSpacing;
       final spaceBetweenNotes = _calculateOptimalSpacing(
         musicalElements,
         availableSpace,

@@ -8,6 +8,9 @@ export 'pitch.dart';
 export 'duration.dart';
 export 'advanced_elements.dart';
 
+// Import das classes avançadas necessárias
+import 'advanced_elements.dart';
+
 /// Descreve o estado de uma nota em relação a uma barra de ligação (beam).
 enum BeamType { start, inner, end }
 
@@ -323,14 +326,14 @@ class Note extends MusicalElement {
   /// Opcional: Define se esta nota inicia ou termina uma ligadura de expressão.
   final SlurType? slur;
 
-  /// Lista de ornamentos aplicados à nota (forward declaration)
-  final List<dynamic> ornaments;
+  /// Lista de ornamentos aplicados à nota
+  final List<Ornament> ornaments;
 
-  /// Dinâmica específica da nota (forward declaration)
-  final dynamic dynamicElement;
+  /// Dinâmica específica da nota
+  final Dynamic? dynamicElement;
 
-  /// Técnicas especiais da nota (forward declaration)
-  final List<dynamic> techniques;
+  /// Técnicas especiais da nota
+  final List<PlayingTechnique> techniques;
 
   Note({
     required this.pitch,
@@ -350,7 +353,7 @@ class Rest extends MusicalElement {
   final Duration duration;
 
   /// Lista de ornamentos aplicados à pausa (ex: fermata)
-  final List<dynamic> ornaments;
+  final List<Ornament> ornaments;
 
   Rest({required this.duration, this.ornaments = const []});
 }

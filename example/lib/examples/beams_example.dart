@@ -9,75 +9,99 @@ class BeamsExample extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Grupo de Colcheias (Eighth notes)
+    // Grupo de Colcheias (Eighth notes) - 1 barra
     final List<MusicalElement> eighthNoteBeams = [
       Clef(clefType: ClefType.treble),
       Note(
-        pitch: const Pitch(step: 'G', octave: 4),
-        duration: const Duration(DurationType.eighth),
-        beam: BeamType.start,
-      ),
+          pitch: const Pitch(step: 'G', octave: 4),
+          duration: const Duration(DurationType.eighth),
+          beam: BeamType.start),
       Note(
-        pitch: const Pitch(step: 'A', octave: 4),
-        duration: const Duration(DurationType.eighth),
-        beam: BeamType.end,
-      ),
+          pitch: const Pitch(step: 'A', octave: 4),
+          duration: const Duration(DurationType.eighth)),
       Note(
-        pitch: const Pitch(step: 'B', octave: 4),
-        duration: const Duration(DurationType.eighth),
-        beam: BeamType.start,
-      ),
+          pitch: const Pitch(step: 'B', octave: 4),
+          duration: const Duration(DurationType.eighth)),
       Note(
-        pitch: const Pitch(step: 'C', octave: 5),
-        duration: const Duration(DurationType.eighth),
-        beam: BeamType.end,
-      ),
+          pitch: const Pitch(step: 'C', octave: 5),
+          duration: const Duration(DurationType.eighth),
+          beam: BeamType.end),
     ];
 
-    // Grupo de Semicolcheias (Sixteenth notes)
+    // Grupo de Semicolcheias (Sixteenth notes) - 2 barras
     final List<MusicalElement> sixteenthNoteBeams = [
       Clef(clefType: ClefType.treble),
       Note(
-        pitch: const Pitch(step: 'C', octave: 5),
-        duration: const Duration(DurationType.sixteenth),
-        beam: BeamType.start,
-      ),
+          pitch: const Pitch(step: 'C', octave: 5),
+          duration: const Duration(DurationType.sixteenth),
+          beam: BeamType.start),
       Note(
-        pitch: const Pitch(step: 'D', octave: 5),
-        duration: const Duration(DurationType.sixteenth),
-      ),
+          pitch: const Pitch(step: 'D', octave: 5),
+          duration: const Duration(DurationType.sixteenth)),
       Note(
-        pitch: const Pitch(step: 'E', octave: 5),
-        duration: const Duration(DurationType.sixteenth),
-      ),
+          pitch: const Pitch(step: 'E', octave: 5),
+          duration: const Duration(DurationType.sixteenth)),
       Note(
-        pitch: const Pitch(step: 'F', octave: 5),
-        duration: const Duration(DurationType.sixteenth),
-        beam: BeamType.end,
-      ),
+          pitch: const Pitch(step: 'F', octave: 5),
+          duration: const Duration(DurationType.sixteenth),
+          beam: BeamType.end),
+    ];
+
+    // Grupo de Fusas (Thirty-second notes) - 3 barras
+    final List<MusicalElement> thirtySecondNoteBeams = [
+      Clef(clefType: ClefType.treble),
+      Note(
+          pitch: const Pitch(step: 'F', octave: 4),
+          duration: const Duration(DurationType.thirtySecond),
+          beam: BeamType.start),
+      Note(
+          pitch: const Pitch(step: 'G', octave: 4),
+          duration: const Duration(DurationType.thirtySecond)),
+      Note(
+          pitch: const Pitch(step: 'A', octave: 4),
+          duration: const Duration(DurationType.thirtySecond)),
+      Note(
+          pitch: const Pitch(step: 'B', octave: 4),
+          duration: const Duration(DurationType.thirtySecond),
+          beam: BeamType.end),
+    ];
+
+    // Grupo de Semifusas (Sixty-fourth notes) - 4 barras
+    final List<MusicalElement> sixtyFourthNoteBeams = [
+      Clef(clefType: ClefType.treble),
+      Note(
+          pitch: const Pitch(step: 'A', octave: 4),
+          duration: const Duration(DurationType.sixtyFourth),
+          beam: BeamType.start),
+      Note(
+          pitch: const Pitch(step: 'B', octave: 4),
+          duration: const Duration(DurationType.sixtyFourth)),
+      Note(
+          pitch: const Pitch(step: 'C', octave: 5),
+          duration: const Duration(DurationType.sixtyFourth)),
+      Note(
+          pitch: const Pitch(step: 'D', octave: 5),
+          duration: const Duration(DurationType.sixtyFourth),
+          beam: BeamType.end),
     ];
 
     // Grupo Misto
     final List<MusicalElement> mixedBeams = [
       Clef(clefType: ClefType.treble),
       Note(
-        pitch: const Pitch(step: 'F', octave: 4),
-        duration: const Duration(DurationType.eighth),
-        beam: BeamType.start,
-      ),
+          pitch: const Pitch(step: 'F', octave: 4),
+          duration: const Duration(DurationType.eighth),
+          beam: BeamType.start),
       Note(
-        pitch: const Pitch(step: 'G', octave: 4),
-        duration: const Duration(DurationType.sixteenth),
-      ),
+          pitch: const Pitch(step: 'G', octave: 4),
+          duration: const Duration(DurationType.sixteenth)),
       Note(
-        pitch: const Pitch(step: 'A', octave: 4),
-        duration: const Duration(DurationType.sixteenth),
-        beam: BeamType.end,
-      ),
+          pitch: const Pitch(step: 'A', octave: 4),
+          duration: const Duration(DurationType.sixteenth),
+          beam: BeamType.end),
       Note(
-        pitch: const Pitch(step: 'B', octave: 4),
-        duration: const Duration(DurationType.eighth),
-      ),
+          pitch: const Pitch(step: 'B', octave: 4),
+          duration: const Duration(DurationType.eighth)),
     ];
 
     return Scaffold(
@@ -91,21 +115,29 @@ class BeamsExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSection(
-              title: 'Barras de Ligação Simples (Colcheias)',
-              description:
-                  'Grupos de colcheias ligadas por uma única barra. Verifique a inclinação e a espessura da barra.',
+              title: 'Colcheias (1 Barra)',
+              description: 'Grupos de colcheias ligadas por uma única barra.',
               elements: eighthNoteBeams,
             ),
             _buildSection(
-              title: 'Barras de Ligação Duplas (Semicolcheias)',
-              description:
-                  'Grupo de semicolcheias ligadas por duas barras. Atualmente, o renderer pode mostrar apenas uma barra; a implementação de barras múltiplas é um próximo passo.',
+              title: 'Semicolcheias (2 Barras)',
+              description: 'Grupo de semicolcheias ligadas por duas barras.',
               elements: sixteenthNoteBeams,
+            ),
+            _buildSection(
+              title: 'Fusas (3 Barras)',
+              description: 'Grupo de fusas ligadas por três barras.',
+              elements: thirtySecondNoteBeams,
+            ),
+            _buildSection(
+              title: 'Semifusas (4 Barras)',
+              description: 'Grupo de semifusas ligadas por quatro barras.',
+              elements: sixtyFourthNoteBeams,
             ),
             _buildSection(
               title: 'Grupos Mistos',
               description:
-                  'Um grupo misto de colcheias e semicolcheias. A renderização correta de barras secundárias para as semicolcheias é uma funcionalidade avançada.',
+                  'Um grupo misto. A renderização de barras parciais é uma funcionalidade avançada.',
               elements: mixedBeams,
             ),
           ],

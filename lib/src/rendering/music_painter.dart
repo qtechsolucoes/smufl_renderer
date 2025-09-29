@@ -82,7 +82,13 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         currentClef = element; // Atualiza a clave na instância
         _drawClef(canvas, element, position, staffSpace);
       } else if (element is KeySignature) {
-        _drawKeySignature(canvas, element, localCurrentClef, position, staffSpace);
+        _drawKeySignature(
+          canvas,
+          element,
+          localCurrentClef,
+          position,
+          staffSpace,
+        );
       } else if (element is TimeSignature) {
         _drawTimeSignature(canvas, element, position, staffSpace);
       } else if (element is Note) {
@@ -139,7 +145,13 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
         // Desenhar acidentes se presente
         if (element.pitch.accidentalGlyph != null) {
-          _drawAccidental(canvas, element, localCurrentClef, position, staffSpace);
+          _drawAccidental(
+            canvas,
+            element,
+            localCurrentClef,
+            position,
+            staffSpace,
+          );
         }
 
         // === ELEMENTOS AVANÇADOS ===
@@ -154,9 +166,25 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
           theme,
         );
       } else if (element is Ornament) {
-        drawOrnament(canvas, element, position, staffSpace, metadata, theme, 'noteheadBlack');
+        drawOrnament(
+          canvas,
+          element,
+          position,
+          staffSpace,
+          metadata,
+          theme,
+          'noteheadBlack',
+        );
       } else if (element is Dynamic) {
-        drawDynamic(canvas, element, position, staffSpace, metadata, theme, 'noteheadBlack');
+        drawDynamic(
+          canvas,
+          element,
+          position,
+          staffSpace,
+          metadata,
+          theme,
+          'noteheadBlack',
+        );
       } else if (element is Breath) {
         drawBreath(canvas, element, position, staffSpace, metadata, theme);
       } else if (element is MusicText) {
@@ -335,8 +363,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     final stemHeight = staffSpace * 3.5;
 
     // Usar metadados SMuFL para dimensões precisas
-    final beamThickness = metadata.getEngravingDefault('beamThickness') * staffSpace;
-    final beamSpacing = metadata.getEngravingDefault('beamSpacing') * staffSpace;
+    final beamThickness =
+        metadata.getEngravingDefault('beamThickness') * staffSpace;
+    final beamSpacing =
+        metadata.getEngravingDefault('beamSpacing') * staffSpace;
 
     final firstStem = stemPositions.first;
     final lastStem = stemPositions.last;
@@ -348,8 +378,12 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         : lastStem.dy + stemHeight;
 
     // Determinar quantos beams são necessários
-    final noteDurations = group.map((pe) => (pe.element as Note).duration.type).toList();
-    final maxBeams = noteDurations.map(_getBeamCount).reduce((a, b) => a > b ? a : b);
+    final noteDurations = group
+        .map((pe) => (pe.element as Note).duration.type)
+        .toList();
+    final maxBeams = noteDurations
+        .map(_getBeamCount)
+        .reduce((a, b) => a > b ? a : b);
 
     final beamPaint = Paint()
       ..color = theme.stemColor
@@ -358,7 +392,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
     final stemPaint = Paint()
       ..color = theme.stemColor
-      ..strokeWidth = metadata.getEngravingDefault('stemThickness') * staffSpace;
+      ..strokeWidth =
+          metadata.getEngravingDefault('stemThickness') * staffSpace;
 
     // Desenhar hastes
     for (final stemPos in stemPositions) {
@@ -376,7 +411,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
     // Desenhar beams (barras horizontais)
     for (int beamLevel = 0; beamLevel < maxBeams; beamLevel++) {
-      final beamOffset = beamLevel * (beamThickness + beamSpacing) * (stemsGoUp ? 1 : -1);
+      final beamOffset =
+          beamLevel * (beamThickness + beamSpacing) * (stemsGoUp ? 1 : -1);
 
       double startY = firstStemEndY + beamOffset;
       double endY = lastStemEndY + beamOffset;
@@ -390,8 +426,17 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
         );
       } else {
         // Beams secundários (para semicolcheias, fusas, etc.)
-        _drawSecondaryBeams(canvas, beamPaint, stemPositions, noteDurations,
-                           beamLevel, startY, endY, firstStem, lastStem);
+        _drawSecondaryBeams(
+          canvas,
+          beamPaint,
+          stemPositions,
+          noteDurations,
+          beamLevel,
+          startY,
+          endY,
+          firstStem,
+          lastStem,
+        );
       }
     }
   }
@@ -511,6 +556,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
     _drawArticulations(canvas, note, stemsGoUp, position.dx, noteY, staffSpace);
 
+    // Desenhar ornamentos da nota
+    _drawNoteOrnaments(canvas, note, position.dx, noteY, staffSpace);
+
     if (note.duration.type != DurationType.whole) {
       final stemHeight = staffSpace * 3.5;
       final stemThickness = metadata.getEngravingDefault('stemThickness');
@@ -600,7 +648,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     // Haste para cima → articulação ABAIXO da nota
     // Haste para baixo → articulação ACIMA da nota
     // Sem haste (semibreve) → articulação ACIMA da nota
-    final articulationsGoBelow = stemsGoUp || note.duration.type == DurationType.whole;
+    final articulationsGoBelow =
+        stemsGoUp || note.duration.type == DurationType.whole;
 
     // Usar âncoras SMuFL para posicionamento preciso
     final noteGlyph = note.duration.type.glyphName;
@@ -616,10 +665,13 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     double yOffset;
     if (articulationsGoBelow) {
       // Haste para cima: articulação abaixo da nota
-      yOffset = noteheadHeight * 0.5 + staffSpace * 0.4; // Um pouco abaixo da cabeça
+      yOffset =
+          noteheadHeight * 0.5 + staffSpace * 0.4; // Um pouco abaixo da cabeça
     } else {
       // Haste para baixo ou semibreve: articulação acima da nota
-      yOffset = -(noteheadHeight * 0.5 + staffSpace * 0.4); // Um pouco acima da cabeça
+      yOffset =
+          -(noteheadHeight * 0.5 +
+              staffSpace * 0.4); // Um pouco acima da cabeça
     }
 
     final articulationGlyphs = {
@@ -721,7 +773,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     }
 
     // Verificar se a nota está em linha (posição Y múltipla de staffSpace/2)
-    final staffPosition = _calculateStaffPosition(note.pitch, _getCurrentClef());
+    final staffPosition = _calculateStaffPosition(
+      note.pitch,
+      _getCurrentClef(),
+    );
     final isOnLine = (staffPosition % 2) == 0;
 
     // Se estiver em linha, deslocar o ponto para o espaço acima
@@ -787,7 +842,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
       // Calcular tamanho baseado na altura do glifo
       final glyphHeight = (bbox.bBoxNeY - bbox.bBoxSwY);
       if (glyphHeight > 0) {
-        fontSize = staffSpace * 4.0 * (glyphHeight / 4.0); // Normalizar para altura de 4 staff spaces
+        fontSize =
+            staffSpace *
+            4.0 *
+            (glyphHeight / 4.0); // Normalizar para altura de 4 staff spaces
       }
 
       // Ajustar posição vertical baseada no centro do glifo
@@ -837,7 +895,12 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     }
   }
 
-  void _drawOctaveIndication(Canvas canvas, Clef clef, Offset position, double staffSpace) {
+  void _drawOctaveIndication(
+    Canvas canvas,
+    Clef clef,
+    Offset position,
+    double staffSpace,
+  ) {
     String octaveText = '';
     double yOffset = 0.0;
 
@@ -889,7 +952,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     final glyphName = isSharp ? 'accidentalSharp' : 'accidentalFlat';
 
     // Obter posições específicas para a clave atual
-    final positions = _getKeySignaturePositions(currentClef.actualClefType.name, isSharp);
+    final positions = _getKeySignaturePositions(
+      currentClef.actualClefType.name,
+      isSharp,
+    );
 
     double currentX = position.dx;
     for (int i = 0; i < count && i < positions.length; i++) {
@@ -971,7 +1037,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
       glyphName: numGlyph,
       color: theme.timeSignatureColor,
       x: position.dx,
-      y: position.dy - (1.0 * staffSpace), // Numerador ligeiramente acima do centro
+      y:
+          position.dy -
+          (1.0 * staffSpace), // Numerador ligeiramente acima do centro
       fontSize: staffSpace * 3.5, // Tamanho apropriado para fórmula de compasso
     );
     _drawGlyph(
@@ -979,7 +1047,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
       glyphName: denGlyph,
       color: theme.timeSignatureColor,
       x: position.dx,
-      y: position.dy + (1.0 * staffSpace), // Denominador ligeiramente abaixo do centro
+      y:
+          position.dy +
+          (1.0 * staffSpace), // Denominador ligeiramente abaixo do centro
       fontSize: staffSpace * 3.5, // Tamanho apropriado para fórmula de compasso
     );
   }
@@ -1087,7 +1157,9 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     }
 
     int pitchStep = _stepToDiatonic[pitch.step]!;
-    int diatonicDistance = (pitchStep - baseStep) + ((pitch.octave + clef.octaveShift - baseOctave) * 7);
+    int diatonicDistance =
+        (pitchStep - baseStep) +
+        ((pitch.octave + clef.octaveShift - baseOctave) * 7);
     return basePosition + diatonicDistance;
   }
 
@@ -1129,7 +1201,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     final noteGlyph = note.duration.type.glyphName;
     final accidentalGlyph = note.pitch.accidentalGlyph!;
 
-    final accidentalWidth = metadata.getGlyphWidthInPixels(accidentalGlyph, staffSpace);
+    final accidentalWidth = metadata.getGlyphWidthInPixels(
+      accidentalGlyph,
+      staffSpace,
+    );
 
     // Posição à esquerda da nota com espaçamento apropriado
     final accidentalX = position.dx - accidentalWidth - (staffSpace * 0.2);
@@ -1139,7 +1214,10 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     double accidentalY = noteY;
 
     if (noteAnchors != null) {
-      final opticalCenter = noteAnchors.getAnchorInPixels('opticalCenter', staffSpace);
+      final opticalCenter = noteAnchors.getAnchorInPixels(
+        'opticalCenter',
+        staffSpace,
+      );
       if (opticalCenter != null) {
         accidentalY = noteY + opticalCenter.dy;
       }
@@ -1156,7 +1234,13 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
 
     // Para acidentes microtonais, pode adicionar indicação visual adicional
     if (note.pitch.hasMicrotone) {
-      _drawMicrotoneIndication(canvas, note.pitch, accidentalX, accidentalY, staffSpace);
+      _drawMicrotoneIndication(
+        canvas,
+        note.pitch,
+        accidentalX,
+        accidentalY,
+        staffSpace,
+      );
     }
   }
 
@@ -1356,6 +1440,32 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     // Usa o método do mixin para desenhar a quiáltera
     if (positions.isNotEmpty) {
       drawTuplet(canvas, tuplet, positions, staffSpace, theme);
+    }
+  }
+
+  // Método auxiliar para desenhar ornamentos da nota
+  void _drawNoteOrnaments(
+    Canvas canvas,
+    Note note,
+    double noteX,
+    double noteY,
+    double staffSpace,
+  ) {
+    // Se a nota não tem ornamentos, não faz nada
+    if (note.ornaments.isEmpty) return;
+
+    // Para cada ornamento da nota
+    for (final ornament in note.ornaments) {
+      // Usa o método do mixin AdvancedMusicPainterMixin para desenhar ornamentos
+      drawOrnament(
+        canvas,
+        ornament,
+        Offset(noteX, noteY),
+        staffSpace,
+        metadata,
+        theme,
+        note.duration.type.glyphName,
+      );
     }
   }
 

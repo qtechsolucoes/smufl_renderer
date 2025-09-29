@@ -12,6 +12,13 @@ import 'examples/articulations_example.dart';
 import 'examples/dots_and_ledgers_example.dart';
 import 'examples/chords_example.dart';
 import 'examples/beams_example.dart';
+import 'examples/ornaments_example.dart';
+import 'examples/dynamics_example.dart';
+import 'examples/tempo_agogics_example.dart';
+import 'examples/repeats_example.dart';
+import 'examples/grace_notes_example.dart';
+import 'examples/slurs_ties_example.dart';
+import 'examples/tuplets_example.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +69,13 @@ class _MainScreenState extends State<MainScreen> {
     'Pontos e Linhas Suplementares',
     'Acordes',
     'Barras de Ligação (Beams)',
+    'Ornamentos',
+    'Dinâmicas',
+    'Tempo e Agógica',
+    'Repetições',
+    'Apojaturas e Notas de Graça',
+    'Ligaduras',
+    'Quiálteras (Tuplets)',
   ];
 
   final List<Widget> _pages = const [
@@ -73,6 +87,13 @@ class _MainScreenState extends State<MainScreen> {
     DotsAndLedgersExample(),
     ChordsExample(),
     BeamsExample(),
+    OrnamentsExample(),
+    DynamicsExample(),
+    TempoAgogicsExample(),
+    RepeatsExample(),
+    GraceNotesExample(),
+    SlursTiesExample(),
+    TupletsExample(),
   ];
 
   @override
@@ -137,21 +158,33 @@ class _MainScreenState extends State<MainScreen> {
   Icon _getIconForIndex(int index) {
     switch (index) {
       case 0:
-        return const Icon(Icons.vpn_key_outlined);
+        return const Icon(Icons.vpn_key_outlined); // Claves
       case 1:
-        return const Icon(Icons.tag);
+        return const Icon(Icons.tag); // Armaduras
       case 2:
-        return const Icon(Icons.hourglass_empty);
+        return const Icon(Icons.hourglass_empty); // Figuras Rítmicas
       case 3:
-        return const Icon(Icons.superscript_outlined);
+        return const Icon(Icons.superscript_outlined); // Acidentes
       case 4:
-        return const Icon(Icons.arrow_drop_down_circle_outlined);
+        return const Icon(Icons.arrow_drop_down_circle_outlined); // Articulações
       case 5:
-        return const Icon(Icons.more_horiz);
+        return const Icon(Icons.more_horiz); // Pontos e Linhas
       case 6:
-        return const Icon(Icons.view_module_outlined);
+        return const Icon(Icons.view_module_outlined); // Acordes
       case 7:
-        return const Icon(Icons.link);
+        return const Icon(Icons.link); // Beams
+      case 8:
+        return const Icon(Icons.auto_awesome); // Ornamentos
+      case 9:
+        return const Icon(Icons.volume_up); // Dinâmicas
+      case 10:
+        return const Icon(Icons.speed); // Tempo e Agógica
+      case 11:
+        return const Icon(Icons.repeat); // Repetições
+      case 12:
+        return const Icon(Icons.scatter_plot); // Apojaturas
+      case 13:
+        return const Icon(Icons.trending_up); // Ligaduras
       default:
         return const Icon(Icons.music_note);
     }

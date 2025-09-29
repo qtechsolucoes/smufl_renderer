@@ -152,7 +152,7 @@ mixin AdvancedMusicPainterMixin {
     MusicScoreTheme theme,
     String noteGlyph,
   ) {
-    String? glyphName = _getOrnamentGlyph(ornament.type);
+    String? glyphName = _getOrnamentGlyph(ornament.type, ornament.above);
     if (glyphName == null) return;
 
     // Obter dimensões da cabeça da nota para centralização
@@ -160,10 +160,23 @@ mixin AdvancedMusicPainterMixin {
     final noteheadWidth = (bbox?['bBoxNE']?[0] ?? 1.18) * staffSpace;
     final noteheadHeight = (bbox?['bBoxNE']?[1] ?? 0.5) * staffSpace;
 
-    // Posicionamento correto dos ornamentos SEMPRE ACIMA da nota
-    // Centralizado na cabeça da nota e um pouco acima
+    // SEGUIR A MESMA LÓGICA DAS ARTICULAÇÕES
+    // Determinar se ornamento vai acima ou abaixo baseado na propriedade above
+    // Se above não for especificado, usar posicionamento padrão (acima)
+    final ornamentsGoAbove = ornament.above;
+
+    // Posicionamento baseado na direção
+    double yOffset;
+    if (ornamentsGoAbove) {
+      // Ornamento acima da nota
+      yOffset = -(noteheadHeight * 0.5 + staffSpace * 1.2); // Mais distante que articulações
+    } else {
+      // Ornamento abaixo da nota
+      yOffset = noteheadHeight * 0.5 + staffSpace * 1.2; // Mais distante que articulações
+    }
+
     final ornamentX = position.dx + (noteheadWidth / 2);
-    final ornamentY = position.dy - (noteheadHeight * 0.5 + staffSpace * 0.8);
+    final ornamentY = position.dy + yOffset;
 
     _drawGlyph(
       canvas: canvas,
@@ -186,61 +199,76 @@ mixin AdvancedMusicPainterMixin {
     }
   }
 
-  String? _getOrnamentGlyph(OrnamentType type) {
-    // Mapeamento baseado nas imagens de referência e SMuFL oficial
+  String? _getOrnamentGlyph(OrnamentType type, bool above) {
+    // Tratamento especial para fermatas que dependem da posição
+    if (type == OrnamentType.fermata) {
+      return above ? 'fermataAbove' : 'fermataBelow';
+    }
+
+    // Mapeamento baseado nos metadados oficiais da fonte Bravura SMuFL
+    // Usando glifos corretos conforme especificação SMuFL
     const ornamentGlyphs = {
-      // Trilos - baseado na primeira imagem
+      // === TRILOS E TRINADOS ===
       OrnamentType.trill: 'ornamentTrill',
       OrnamentType.trillFlat: 'ornamentTrillFlat',
       OrnamentType.trillNatural: 'ornamentTrillNatural',
       OrnamentType.trillSharp: 'ornamentTrillSharp',
       OrnamentType.shortTrill: 'ornamentShortTrill',
+      OrnamentType.trillLigature: 'ornamentPrecompTrillLowerMordent',
 
-      // Mordentes - variações mostradas nas imagens
+      // === MORDENTES ===
       OrnamentType.mordent: 'ornamentMordent',
       OrnamentType.invertedMordent: 'ornamentMordentInverted',
-      OrnamentType.mordentUpperPrefix: 'ornamentMordentUpperPrefix',
-      OrnamentType.mordentLowerPrefix: 'ornamentMordentLowerPrefix',
+      OrnamentType.mordentUpperPrefix: 'ornamentPrecompMordentUpperPrefix',
+      OrnamentType.mordentLowerPrefix: 'ornamentPrecompMordentLowerPrefix',
 
-      // Grupetos (turns)
+      // === GRUPETOS (TURNS) ===
       OrnamentType.turn: 'ornamentTurn',
+      OrnamentType.turnInverted: 'ornamentTurnInverted',
       OrnamentType.invertedTurn: 'ornamentTurnInverted',
       OrnamentType.turnSlash: 'ornamentTurnSlash',
 
-      // Apoggiaturas e acciaccaturas
-      OrnamentType.appoggiaturaUp: 'ornamentAppoggiaturaUp',
-      OrnamentType.appoggiaturaDown: 'ornamentAppoggiaturaDown',
-      OrnamentType.acciaccatura: 'ornamentAppoggiaturaDown',
+      // === APOJATURAS E ACCIACCATURAS ===
+      OrnamentType.appoggiaturaUp: 'graceNoteAcciaccaturaStemUp',
+      OrnamentType.appoggiaturaDown: 'graceNoteAcciaccaturaStemDown',
+      OrnamentType.acciaccatura: 'graceNoteAcciaccaturaStemUp',
 
-      // Fermatas
-      OrnamentType.fermata: 'fermataAbove',
+      // === FERMATAS ESPECÍFICAS ===
       OrnamentType.fermataBelow: 'fermataBelow',
-      OrnamentType.fermataBelowInverted: 'fermataBelow',
+      OrnamentType.fermataBelowInverted: 'fermataBelowInverted',
 
-      // Ornamentos especiais
+      // === ORNAMENTOS BARROCOS ===
       OrnamentType.schleifer: 'ornamentSchleifer',
-      OrnamentType.shake: 'ornamentShake3',
-      OrnamentType.wavyLine: 'ornamentPrecompSlide',
-      OrnamentType.trillLigature: 'ornamentTrillLigature',
       OrnamentType.haydn: 'ornamentHaydn',
 
-      // Linhas e deslizamentos
+      // === EFEITOS ESPECIAIS ===
+      OrnamentType.shake: 'ornamentShake3',
+      OrnamentType.wavyLine: 'ornamentPrecompSlide',
+
+      // === LINHAS ORNAMENTAIS ===
       OrnamentType.zigZagLineNoRightEnd: 'ornamentZigZagLineNoRightEnd',
       OrnamentType.zigZagLineWithRightEnd: 'ornamentZigZagLineWithRightEnd',
+      OrnamentType.zigzagLine: 'ornamentZigZagLineWithRightEnd',
 
-      // Ornamentos adicionais das imagens
+      // === GLISSANDOS E PORTAMENTOS ===
       OrnamentType.glissando: 'glissandoUp',
       OrnamentType.portamento: 'ornamentPrecompSlide',
       OrnamentType.slide: 'glissandoUp',
-      OrnamentType.scoop: 'ornamentPrecompSlide',
-      OrnamentType.fall: 'ornamentPrecompSlide',
-      OrnamentType.doit: 'ornamentPrecompSlide',
-      OrnamentType.plop: 'ornamentPrecompSlide',
-      OrnamentType.bend: 'ornamentPrecompSlide',
-      OrnamentType.zigzagLine: 'ornamentZigZagLineWithRightEnd',
+
+      // === EFEITOS INSTRUMENTAIS ===
+      OrnamentType.scoop: 'brassBendUp',
+      OrnamentType.fall: 'brassFallMedium',
+      OrnamentType.doit: 'brassDoitMedium',
+      OrnamentType.plop: 'brassPlop',
+      OrnamentType.bend: 'brassBendUp',
+
+      // === ARPEJOS ===
       OrnamentType.arpeggio: 'arpeggiato',
-      OrnamentType.grace: 'ornamentAppoggiaturaDown',
+
+      // === NOTAS DE GRAÇA ===
+      OrnamentType.grace: 'graceNoteAcciaccaturaStemUp',
     };
+
     return ornamentGlyphs[type];
   }
 

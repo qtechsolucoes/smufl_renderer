@@ -2,11 +2,11 @@
 
 /// Define os tipos de duração rítmica.
 enum DurationType {
-  whole(1.0, 'noteheadWhole'),           // semibreve = 1
-  half(0.5, 'noteheadHalf'),             // mínima = 1/2
-  quarter(0.25, 'noteheadBlack'),        // semínima = 1/4
-  eighth(0.125, 'noteheadBlack'),        // colcheia = 1/8
-  sixteenth(0.0625, 'noteheadBlack'),    // semicolcheia = 1/16
+  whole(1.0, 'noteheadWhole'), // semibreve = 1
+  half(0.5, 'noteheadHalf'), // mínima = 1/2
+  quarter(0.25, 'noteheadBlack'), // semínima = 1/4
+  eighth(0.125, 'noteheadBlack'), // colcheia = 1/8
+  sixteenth(0.0625, 'noteheadBlack'), // semicolcheia = 1/16
   thirtySecond(0.03125, 'noteheadBlack'), // fusa = 1/32
   sixtyFourth(0.015625, 'noteheadBlack'), // semifusa = 1/64
   oneHundredTwentyEighth(0.0078125, 'noteheadBlack'); // 1/128
