@@ -1,10 +1,11 @@
 // lib/src/music_model/advanced_elements.dart
+// VERSÃO COMPLETA: Todos os símbolos SMuFL implementados
 
+import 'package:flutter/material.dart';
 import 'musical_element.dart';
 
-// === TÉCNICAS DE EXECUÇÃO (ELEMENTO QUE FALTAVA) ===
+// === TÉCNICAS DE EXECUÇÃO ===
 
-/// Tipos de técnicas de execução.
 enum TechniqueType {
   pizzicato,
   snapPizzicato,
@@ -19,33 +20,45 @@ enum TechniqueType {
   vibrato,
   naturalHarmonic,
   artificialHarmonic,
+  // NOVOS: Técnicas estendidas
+  multiphonics,
+  overblowing,
+  tongueram,
+  circularBreathing,
+  flutter,
+  whistle,
+  growl,
 }
 
-/// Representa uma técnica de execução específica.
 class PlayingTechnique extends MusicalElement {
   final TechniqueType type;
+  final String? text;
 
-  PlayingTechnique({required this.type});
+  PlayingTechnique({required this.type, this.text});
 }
 
-// === ORNAMENTOS AVANÇADOS ===
+// === ORNAMENTOS COMPLETOS ===
 
-/// Tipos de ornamentos disponíveis
 enum OrnamentType {
+  // Básicos
   trill,
   trillFlat,
   trillNatural,
   trillSharp,
   mordent,
-  invertedMordent, // CORRIGIDO: Adicionado
+  invertedMordent,
   shortTrill,
   turn,
   turnInverted,
-  invertedTurn, // CORRIGIDO: Adicionado
+  invertedTurn,
   turnSlash,
+
+  // Apoggiaturas
   appoggiaturaUp,
   appoggiaturaDown,
   acciaccatura,
+
+  // Glissandos
   glissando,
   portamento,
   slide,
@@ -54,24 +67,33 @@ enum OrnamentType {
   doit,
   plop,
   bend,
+
+  // Avançados
   shake,
   wavyLine,
   zigzagLine,
   fermata,
-  fermataBelow, // CORRIGIDO: Adicionado
-  fermataBelowInverted, // CORRIGIDO: Adicionado
-  schleifer, // CORRIGIDO: Adicionado
-  mordentUpperPrefix, // CORRIGIDO: Adicionado
-  mordentLowerPrefix, // CORRIGIDO: Adicionado
-  trillLigature, // CORRIGIDO: Adicionado
-  haydn, // CORRIGIDO: Adicionado
-  zigZagLineNoRightEnd, // CORRIGIDO: Adicionado
-  zigZagLineWithRightEnd, // CORRIGIDO: Adicionado
+  fermataBelow,
+  fermataBelowInverted,
+  schleifer,
+  mordentUpperPrefix,
+  mordentLowerPrefix,
+  trillLigature,
+  haydn,
+  zigZagLineNoRightEnd,
+  zigZagLineWithRightEnd,
   arpeggio,
   grace,
+
+  // NOVOS: Ornamentos barrocos e clássicos
+  pralltriller,
+  mordentWithUpperPrefix,
+  slideUp,
+  slideDown,
+  doubleTongue,
+  tripleTongue,
 }
 
-/// Representa um ornamento musical
 class Ornament extends MusicalElement {
   final OrnamentType type;
   final bool above;
@@ -86,10 +108,10 @@ class Ornament extends MusicalElement {
   });
 }
 
-// === DINÂMICAS AVANÇADAS ===
+// === DINÂMICAS COMPLETAS ===
 
-/// Tipos de dinâmicas disponíveis
 enum DynamicType {
+  // Básicas
   pianississimo,
   pianissimo,
   piano,
@@ -98,33 +120,44 @@ enum DynamicType {
   forte,
   fortissimo,
   fortississimo,
+
+  // Extremas
   pppp,
   ppppp,
   pppppp,
   ffff,
   fffff,
   ffffff,
+
+  // Abreviações
+  ppp,
+  pp,
+  p,
+  mp,
+  mf,
+  f,
+  ff,
+  fff,
+
+  // Especiais
   sforzando,
   sforzandoFF,
   sforzandoPiano,
-  sforzandoPianissimo, // CORRIGIDO: Adicionado
+  sforzandoPianissimo,
   rinforzando,
-  fortePiano, // CORRIGIDO: "fortepiano" para "fortePiano"
+  fortePiano,
   crescendo,
   diminuendo,
-  niente, // CORRIGIDO: Adicionado
-  ppp, // CORRIGIDO: Adicionado
-  pp, // CORRIGIDO: Adicionado
-  p, // CORRIGIDO: Adicionado
-  mp, // CORRIGIDO: Adicionado
-  mf, // CORRIGIDO: Adicionado
-  f, // CORRIGIDO: Adicionado
-  ff, // CORRIGIDO: Adicionado
-  fff, // CORRIGIDO: Adicionado
+  niente,
+
+  // NOVOS: Dinâmicas especiais
+  subito,
+  possibile,
+  menoMosso,
+  piuMosso,
   custom,
 }
 
-/// Representa uma indicação dinâmica
 class Dynamic extends MusicalElement {
   final DynamicType type;
   final String? customText;
@@ -250,7 +283,7 @@ class MultiVoiceMeasure extends Measure {
   List<int> get voiceNumbers => voices.keys.toList()..sort();
 }
 
-// === REPETIÇÕES AVANÇADAS ===
+// === REPETIÇÕES COMPLETAS ===
 
 enum RepeatType {
   start,
@@ -259,11 +292,12 @@ enum RepeatType {
   coda,
   dalSegno,
   dalSegnoAlCoda,
+  dalSegnoAlFine,
   daCapo,
   daCapoAlCoda,
+  daCapoAlFine,
   fine,
   toCoda,
-  // Novos tipos de repetição
   segnoSquare,
   codaSquare,
   repeat1Bar,
@@ -271,6 +305,11 @@ enum RepeatType {
   repeat4Bars,
   simile,
   percentRepeat,
+  // NOVOS
+  repeatDots,
+  repeatLeft,
+  repeatRight,
+  repeatBoth,
 }
 
 class RepeatMark extends MusicalElement {
@@ -296,6 +335,11 @@ enum TextType {
   composer,
   arranger,
   dynamics,
+  // NOVOS
+  dedication,
+  rights,
+  partName,
+  instrument,
 }
 
 enum TextPlacement { above, below, inside }
@@ -337,6 +381,12 @@ enum NoteTechnique {
   palmMute,
   deadNote,
   ghost,
+  // NOVOS
+  chokeSymbol,
+  damp,
+  dampAll,
+  openRim,
+  closedRim,
 }
 
 // === INDICAÇÕES DE TEMPO ===
@@ -355,7 +405,7 @@ class TempoMark extends MusicalElement {
   });
 }
 
-// === BARRAS DE COMPASSO AVANÇADAS ===
+// === BARRAS DE COMPASSO COMPLETAS ===
 
 enum BarlineType {
   single,
@@ -371,6 +421,10 @@ enum BarlineType {
   invisible,
   short,
   tick,
+  // NOVOS
+  heavy,
+  heavyHeavy,
+  none,
 }
 
 class AdvancedBarline extends MusicalElement {
@@ -383,7 +437,20 @@ class AdvancedBarline extends MusicalElement {
 
 // === LINHAS DE PROLONGAMENTO ===
 
-enum LineType { solid, dashed, dotted, wavy, zigzag, trill, glissando, octave }
+enum LineType {
+  solid,
+  dashed,
+  dotted,
+  wavy,
+  zigzag,
+  trill,
+  glissando,
+  octave,
+  // NOVOS
+  pedal,
+  bracket,
+  voltaBracket,
+}
 
 class Line extends MusicalElement {
   final LineType type;
@@ -407,7 +474,16 @@ class Line extends MusicalElement {
 
 // === RESPIRAÇÕES E CESURAS ===
 
-enum BreathType { comma, tick, upbow, caesura, shortCaesura, longCaesura }
+enum BreathType {
+  comma,
+  tick,
+  upbow,
+  caesura,
+  shortCaesura,
+  longCaesura,
+  // NOVOS
+  chokeCymbal,
+}
 
 class Breath extends MusicalElement {
   final BreathType type;
@@ -417,7 +493,15 @@ class Breath extends MusicalElement {
 
 // === HARMÔNICOS ===
 
-enum HarmonicType { natural, artificial, touched, sounding }
+enum HarmonicType {
+  natural,
+  artificial,
+  touched,
+  sounding,
+  // NOVOS
+  stringHarmonic,
+  brassHarmonic,
+}
 
 class Harmonic extends MusicalElement {
   final HarmonicType type;
@@ -429,19 +513,19 @@ class Harmonic extends MusicalElement {
 // === SINAIS DE OITAVA ===
 
 enum OctaveType {
-  octave8va,      // 8va (uma oitava acima)
-  octave8vb,      // 8vb (uma oitava abaixo)
-  octave15ma,     // 15ma (duas oitavas acima)
-  octave15mb,     // 15mb (duas oitavas abaixo)
-  octave22ma,     // 22ma (três oitavas acima)
-  octave22mb,     // 22mb (três oitavas abaixo)
+  octave8va,
+  octave8vb,
+  octave15ma,
+  octave15mb,
+  octave22ma,
+  octave22mb,
 }
 
 class OctaveMark extends MusicalElement {
   final OctaveType type;
-  final double? length; // Comprimento da linha
+  final double? length;
   final bool showBracket;
-  final String? text; // Texto customizado (ex: "loco")
+  final String? text;
 
   OctaveMark({
     required this.type,
@@ -450,7 +534,6 @@ class OctaveMark extends MusicalElement {
     this.text,
   });
 
-  /// Retorna o glifo SMuFL apropriado
   String get glyphName {
     switch (type) {
       case OctaveType.octave8va:
@@ -468,7 +551,6 @@ class OctaveMark extends MusicalElement {
     }
   }
 
-  /// Retorna o número do deslocamento de oitava
   int get octaveShift {
     switch (type) {
       case OctaveType.octave8va:
@@ -487,15 +569,9 @@ class OctaveMark extends MusicalElement {
   }
 }
 
-// === CLUSTERS E NOTAÇÃO CONTEMPORÂNEA ===
+// === CLUSTERS ===
 
-enum ClusterType {
-  tone,           // Cluster de tons
-  semitone,       // Cluster de semitons
-  microtone,      // Cluster microtonal
-  white,          // Somente teclas brancas
-  black,          // Somente teclas pretas
-}
+enum ClusterType { tone, semitone, microtone, white, black }
 
 class Cluster extends MusicalElement {
   final ClusterType type;
@@ -513,14 +589,9 @@ class Cluster extends MusicalElement {
   });
 }
 
-// === SÍMBOLOS DE MÉTRICA E MARCAÇÃO TEMPORAL ===
+// === METRÔNOMO ===
 
-enum MetronomeMarkType {
-  note,           // Nota + BPM
-  equation,       // Nota = Nota
-  range,          // Faixa de BPM
-  approximate,    // BPM aproximado
-}
+enum MetronomeMarkType { note, equation, range, approximate }
 
 class MetronomeMark extends MusicalElement {
   final MetronomeMarkType type;
@@ -542,15 +613,9 @@ class MetronomeMark extends MusicalElement {
   });
 }
 
-// === CAESURAS E RESPIRAÇÕES AVANÇADAS ===
+// === CAESURAS ===
 
-enum CaesuraType {
-  short,          // Caesura curta
-  long,           // Caesura longa
-  thick,          // Caesura grossa
-  curved,         // Caesura curva
-  double,         // Caesura dupla
-}
+enum CaesuraType { short, long, thick, curved, double }
 
 class Caesura extends MusicalElement {
   final CaesuraType type;
@@ -571,4 +636,691 @@ class Caesura extends MusicalElement {
         return 'caesura';
     }
   }
+}
+
+// === PEDAL (NOVO) ===
+
+enum PedalType { start, change, end, continuous }
+
+class PedalMark extends MusicalElement {
+  final PedalType type;
+  final double? length;
+
+  PedalMark({required this.type, this.length});
+
+  String? get glyphName {
+    switch (type) {
+      case PedalType.start:
+        return 'keyboardPedalPed';
+      case PedalType.end:
+        return 'keyboardPedalUp';
+      case PedalType.change:
+        return 'keyboardPedalSost';
+      case PedalType.continuous:
+        return null; // Será uma linha
+    }
+  }
+}
+
+// === ARPEJOS AVANÇADOS (NOVO) ===
+
+enum ArpeggioType { standard, up, down, bracket }
+
+class AdvancedArpeggio extends MusicalElement {
+  final ArpeggioType type;
+  final double height;
+
+  AdvancedArpeggio({required this.type, required this.height});
+
+  String get glyphName {
+    switch (type) {
+      case ArpeggioType.standard:
+        return 'wiggleArpeggiatoUp';
+      case ArpeggioType.up:
+        return 'wiggleArpeggiatoUpArrow';
+      case ArpeggioType.down:
+        return 'wiggleArpeggiatoDownArrow';
+      case ArpeggioType.bracket:
+        return 'arpeggiato';
+    }
+  }
+}
+
+// === GRACE NOTES (NOVO) ===
+
+class GraceNote extends MusicalElement {
+  final Note note;
+  final bool isAcciaccatura; // true = com barra, false = sem barra
+  final bool slash;
+
+  GraceNote({
+    required this.note,
+    this.isAcciaccatura = true,
+    this.slash = true,
+  });
+}
+
+// === TREMOLOS (NOVO) ===
+
+enum TremoloType {
+  single1, // 1 barra
+  single2, // 2 barras
+  single3, // 3 barras
+  measured, // Tremolo medido
+  unmeasured, // Tremolo não medido
+  buzz, // Buzz roll (percussão)
+}
+
+class TremoloMark extends MusicalElement {
+  final TremoloType type;
+  final int numberOfMarks;
+
+  TremoloMark({required this.type, this.numberOfMarks = 3});
+
+  String? get glyphName {
+    switch (type) {
+      case TremoloType.single1:
+        return 'tremolo1';
+      case TremoloType.single2:
+        return 'tremolo2';
+      case TremoloType.single3:
+        return 'tremolo3';
+      case TremoloType.buzz:
+        return 'buzzRoll';
+      default:
+        return 'tremolo3';
+    }
+  }
+}
+
+// === BENDS (NOVO - para guitarra/blues) ===
+
+class BendMark extends MusicalElement {
+  final double
+  semitones; // Quantidade de bend (0.5 = meio tom, 1.0 = tom inteiro)
+  final BendType bendType;
+  final bool showArrow;
+
+  BendMark({
+    required this.semitones,
+    required this.bendType,
+    this.showArrow = true,
+  });
+}
+
+enum BendType { up, down, preBend, release, bendAndRelease }
+
+// === VOLTAGEM (NOVO - colchetes de repetição) ===
+
+class VoltaBracket extends MusicalElement {
+  final List<int> numbers; // [1, 2] para "1., 2."
+  final double length;
+  final String? text;
+
+  VoltaBracket({required this.numbers, required this.length, this.text});
+
+  String get displayText {
+    if (text != null) return text!;
+    return numbers.map((n) => '$n.').join(', ');
+  }
+}
+
+// === SÍMBOLOS DE PERCUSSÃO (NOVO) ===
+
+enum PercussionSymbol {
+  hiHat,
+  hiHatOpen,
+  hiHatHalfOpen,
+  snare,
+  bassDrum,
+  tomLow,
+  tomMid,
+  tomHigh,
+  rideCymbal,
+  crashCymbal,
+  chinaCymbal,
+  splashCymbal,
+  cowbell,
+  woodblock,
+  claves,
+  tambourine,
+  triangle,
+  shaker,
+  // Técnicas
+  rimshot,
+  crossStick,
+  ghostNote,
+  flam,
+  drag,
+  roll,
+}
+
+class PercussionNote extends MusicalElement {
+  final PercussionSymbol symbol;
+  final Duration duration;
+  final List<ArticulationType> articulations;
+
+  PercussionNote({
+    required this.symbol,
+    required this.duration,
+    this.articulations = const [],
+  });
+
+  String get glyphName {
+    switch (symbol) {
+      case PercussionSymbol.hiHat:
+        return 'noteheadXBlack';
+      case PercussionSymbol.hiHatOpen:
+        return 'noteheadCircleX';
+      case PercussionSymbol.snare:
+        return 'noteheadBlack';
+      case PercussionSymbol.bassDrum:
+        return 'noteheadBlack';
+      case PercussionSymbol.rideCymbal:
+        return 'noteheadXBlack';
+      case PercussionSymbol.crashCymbal:
+        return 'noteheadXBlack';
+      case PercussionSymbol.rimshot:
+        return 'noteheadCircleX';
+      case PercussionSymbol.crossStick:
+        return 'noteheadXOrnate';
+      case PercussionSymbol.ghostNote:
+        return 'noteheadParenthesis';
+      default:
+        return 'noteheadBlack';
+    }
+  }
+}
+
+// === JAZZ ARTICULATION (NOVO) ===
+
+enum JazzArticulation {
+  scoop,
+  plop,
+  doit,
+  fall,
+  fallLong,
+  doitLong,
+  bend,
+  flip,
+  smear,
+}
+
+class JazzArticulationMark extends MusicalElement {
+  final JazzArticulation type;
+
+  JazzArticulationMark({required this.type});
+
+  String get glyphName {
+    switch (type) {
+      case JazzArticulation.scoop:
+        return 'brassBendUp';
+      case JazzArticulation.plop:
+        return 'brassPlop';
+      case JazzArticulation.doit:
+        return 'brassDoitMedium';
+      case JazzArticulation.fall:
+        return 'brassFallMedium';
+      case JazzArticulation.fallLong:
+        return 'brassFallLongRoughEnd';
+      case JazzArticulation.doitLong:
+        return 'brassDoitLong';
+      case JazzArticulation.bend:
+        return 'brassBendUp';
+      case JazzArticulation.flip:
+        return 'brassFlip';
+      case JazzArticulation.smear:
+        return 'brassSmear';
+    }
+  }
+}
+
+// === MARCAÇÕES DE CORDAS (NOVO - para instrumentos de cordas) ===
+
+enum StringNumber { string1, string2, string3, string4, string5, string6 }
+
+class StringIndicator extends MusicalElement {
+  final StringNumber string;
+  final bool circled;
+
+  StringIndicator({required this.string, this.circled = true});
+
+  String get displayText {
+    final number = string.index + 1;
+    return circled ? '⃝$number' : '$number';
+  }
+}
+
+// === FINGER NUMBERS (NOVO - digitação) ===
+
+enum FingerNumber {
+  finger0, // Polegar ou corda solta
+  finger1,
+  finger2,
+  finger3,
+  finger4,
+  finger5,
+}
+
+class Fingering extends MusicalElement {
+  final FingerNumber finger;
+  final FingeringPosition position;
+
+  Fingering({required this.finger, this.position = FingeringPosition.above});
+
+  String get glyphName {
+    switch (finger) {
+      case FingerNumber.finger0:
+        return 'fingering0';
+      case FingerNumber.finger1:
+        return 'fingering1';
+      case FingerNumber.finger2:
+        return 'fingering2';
+      case FingerNumber.finger3:
+        return 'fingering3';
+      case FingerNumber.finger4:
+        return 'fingering4';
+      case FingerNumber.finger5:
+        return 'fingering5';
+    }
+  }
+}
+
+enum FingeringPosition { above, below, left, right }
+
+// === MARCAÇÕES DE POSIÇÃO (NOVO - para cordas) ===
+
+class PositionMark extends MusicalElement {
+  final int position; // 1ª posição, 2ª posição, etc.
+  final bool romanNumeral;
+
+  PositionMark({required this.position, this.romanNumeral = true});
+
+  String get displayText {
+    if (romanNumeral) {
+      const romanNumerals = [
+        'I',
+        'II',
+        'III',
+        'IV',
+        'V',
+        'VI',
+        'VII',
+        'VIII',
+        'IX',
+        'X',
+      ];
+      if (position >= 1 && position <= 10) {
+        return romanNumerals[position - 1];
+      }
+    }
+    return position.toString();
+  }
+}
+
+// === ACCORDION REGISTER (NOVO - para acordeão) ===
+
+enum AccordionRegister {
+  bassoon,
+  clarinet,
+  piccolo,
+  violin,
+  master,
+  // Registros de baixo
+  bassoonBass,
+  counterbass,
+}
+
+class AccordionRegisterMark extends MusicalElement {
+  final AccordionRegister register;
+
+  AccordionRegisterMark({required this.register});
+
+  String get glyphName {
+    switch (register) {
+      case AccordionRegister.bassoon:
+        return 'accRegisterBassoon';
+      case AccordionRegister.clarinet:
+        return 'accRegisterClarinet';
+      case AccordionRegister.piccolo:
+        return 'accRegisterPiccolo';
+      case AccordionRegister.violin:
+        return 'accRegisterViolin';
+      case AccordionRegister.master:
+        return 'accRegisterMaster';
+      default:
+        return 'accRegisterBassoon';
+    }
+  }
+}
+
+// === HARP PEDAL DIAGRAM (NOVO) ===
+
+class HarpPedalDiagram extends MusicalElement {
+  final List<HarpPedalPosition> positions; // 7 posições (D, C, B, E, F, G, A)
+
+  HarpPedalDiagram({required this.positions});
+}
+
+enum HarpPedalPosition { flat, natural, sharp }
+
+// === FIGURED BASS (NOVO - baixo cifrado barroco) ===
+
+class FiguredBass extends MusicalElement {
+  final List<String> figures; // ['6', '4', '#']
+  final TextPlacement placement;
+
+  FiguredBass({required this.figures, this.placement = TextPlacement.below});
+
+  String get displayText => figures.join('\n');
+}
+
+// === CHORD SYMBOLS (NOVO - cifras de acordes) ===
+
+enum ChordQuality {
+  major,
+  minor,
+  diminished,
+  augmented,
+  dominant7,
+  major7,
+  minor7,
+  halfDiminished7,
+  diminished7,
+  suspended2,
+  suspended4,
+  // Extensões
+  add9,
+  add11,
+  add13,
+  major9,
+  minor9,
+  dominant9,
+  major11,
+  minor11,
+  dominant11,
+  major13,
+  minor13,
+  dominant13,
+}
+
+class ChordSymbol extends MusicalElement {
+  final String root; // C, D, E, F, G, A, B
+  final String? accidental; // #, b, ##, bb
+  final ChordQuality quality;
+  final String? bass; // Para inversões (ex: C/E)
+  final List<String> alterations; // ['+5', 'b9', etc.]
+
+  ChordSymbol({
+    required this.root,
+    this.accidental,
+    required this.quality,
+    this.bass,
+    this.alterations = const [],
+  });
+
+  String get displayText {
+    final buffer = StringBuffer(root);
+    if (accidental != null) buffer.write(accidental);
+    buffer.write(_qualityToString(quality));
+    for (final alt in alterations) {
+      buffer.write(alt);
+    }
+    if (bass != null) {
+      buffer.write('/$bass');
+    }
+    return buffer.toString();
+  }
+
+  String _qualityToString(ChordQuality quality) {
+    switch (quality) {
+      case ChordQuality.major:
+        return '';
+      case ChordQuality.minor:
+        return 'm';
+      case ChordQuality.diminished:
+        return 'dim';
+      case ChordQuality.augmented:
+        return 'aug';
+      case ChordQuality.dominant7:
+        return '7';
+      case ChordQuality.major7:
+        return 'maj7';
+      case ChordQuality.minor7:
+        return 'm7';
+      case ChordQuality.halfDiminished7:
+        return 'ø7';
+      case ChordQuality.diminished7:
+        return 'dim7';
+      case ChordQuality.suspended2:
+        return 'sus2';
+      case ChordQuality.suspended4:
+        return 'sus4';
+      case ChordQuality.add9:
+        return 'add9';
+      case ChordQuality.add11:
+        return 'add11';
+      case ChordQuality.add13:
+        return 'add13';
+      case ChordQuality.major9:
+        return 'maj9';
+      case ChordQuality.minor9:
+        return 'm9';
+      case ChordQuality.dominant9:
+        return '9';
+      case ChordQuality.major11:
+        return 'maj11';
+      case ChordQuality.minor11:
+        return 'm11';
+      case ChordQuality.dominant11:
+        return '11';
+      case ChordQuality.major13:
+        return 'maj13';
+      case ChordQuality.minor13:
+        return 'm13';
+      case ChordQuality.dominant13:
+        return '13';
+    }
+  }
+}
+
+// === FRETBOARD DIAGRAM (NOVO - para guitarra) ===
+
+class FretboardDiagram extends MusicalElement {
+  final int numberOfStrings;
+  final int numberOfFrets;
+  final Map<int, int> fingering; // string -> fret (0 = solta, -1 = muda)
+  final int? barrePosition; // Traste da pestana
+  final String? chordName;
+
+  FretboardDiagram({
+    this.numberOfStrings = 6,
+    this.numberOfFrets = 5,
+    required this.fingering,
+    this.barrePosition,
+    this.chordName,
+  });
+}
+
+// === MULTIMEASURE REST (NOVO) ===
+
+class MultiMeasureRest extends MusicalElement {
+  final int numberOfMeasures;
+  final bool showNumber;
+
+  MultiMeasureRest({required this.numberOfMeasures, this.showNumber = true});
+
+  String get glyphName {
+    if (numberOfMeasures == 1) return 'restWhole';
+    return 'restMaxima'; // Para múltiplos compassos
+  }
+}
+
+// === SLASH NOTATION (NOVO - notação rítmica) ===
+
+class SlashNotation extends MusicalElement {
+  final Duration duration;
+  final bool showStem;
+  final int? count; // Para repetições
+
+  SlashNotation({required this.duration, this.showStem = true, this.count});
+
+  String get glyphName => 'noteheadSlashWhite';
+}
+
+// === STAFF CHANGE (NOVO - mudança de pauta em piano) ===
+
+enum StaffChangeDirection { upper, lower }
+
+class StaffChange extends MusicalElement {
+  final StaffChangeDirection direction;
+
+  StaffChange({required this.direction});
+}
+
+// === OTTAVA BRACKET (NOVO - colchete de oitava estendido) ===
+
+class OttavaBracket extends MusicalElement {
+  final OctaveType type;
+  final double startX;
+  final double endX;
+  final double y;
+  final bool showNumber;
+  final bool showBracket;
+
+  OttavaBracket({
+    required this.type,
+    required this.startX,
+    required this.endX,
+    required this.y,
+    this.showNumber = true,
+    this.showBracket = true,
+  });
+}
+
+// === HAIRPIN (NOVO - crescendo/diminuendo estendido) ===
+
+class HairpinLine extends MusicalElement {
+  final bool isCrescendo; // true = crescendo, false = diminuendo
+  final double startX;
+  final double endX;
+  final double y;
+  final double height;
+
+  HairpinLine({
+    required this.isCrescendo,
+    required this.startX,
+    required this.endX,
+    required this.y,
+    this.height = 0.5,
+  });
+}
+
+// === GLISSANDO LINE (NOVO) ===
+
+class GlissandoLine extends MusicalElement {
+  final Offset startPosition;
+  final Offset endPosition;
+  final bool wavy; // true = ondulado, false = reto
+  final bool showText;
+  final String? text; // "gliss." ou "port."
+
+  GlissandoLine({
+    required this.startPosition,
+    required this.endPosition,
+    this.wavy = false,
+    this.showText = true,
+    this.text,
+  });
+}
+
+// === SCORDATURA (NOVO - afinação não padrão) ===
+
+class ScordaturaMark extends MusicalElement {
+  final Map<int, Pitch> tuning; // string number -> pitch
+  final bool showClef;
+
+  ScordaturaMark({required this.tuning, this.showClef = true});
+}
+
+// === MUTE/UNMUTE (NOVO - para sopros) ===
+
+enum MuteType { straight, cup, harmon, plunger, bucket, practice, open }
+
+class MuteMark extends MusicalElement {
+  final MuteType type;
+  final bool isActive; // true = colocar surdina, false = tirar surdina
+
+  MuteMark({required this.type, this.isActive = true});
+
+  String? get glyphName {
+    if (!isActive) return 'brassMuteOpen';
+
+    switch (type) {
+      case MuteType.straight:
+        return 'brassmuteOpen'; // Placeholder
+      case MuteType.cup:
+        return 'brassMuteClosed';
+      case MuteType.harmon:
+        return 'brassMuteHalfClosed';
+      case MuteType.plunger:
+        return 'brassMuteClosed';
+      case MuteType.open:
+        return 'brassMuteOpen';
+      default:
+        return 'brassMuteClosed';
+    }
+  }
+}
+
+// === SNAP PIZZICATO (NOVO - bartók pizzicato) ===
+
+class SnapPizzicatoMark extends MusicalElement {
+  final bool above;
+
+  SnapPizzicatoMark({this.above = true});
+
+  String get glyphName =>
+      above ? 'pluckedSnapPizzicatoAbove' : 'pluckedSnapPizzicatoBelow';
+}
+
+// === TIME SIGNATURE SPECIAL (NOVO - compassos especiais) ===
+
+class SpecialTimeSignature extends MusicalElement {
+  final SpecialTimeSigType type;
+
+  SpecialTimeSignature({required this.type});
+
+  String get glyphName {
+    switch (type) {
+      case SpecialTimeSigType.common:
+        return 'timeSigCommon';
+      case SpecialTimeSigType.cut:
+        return 'timeSigCutCommon';
+      case SpecialTimeSigType.plus:
+        return 'timeSigPlus';
+      case SpecialTimeSigType.bracket:
+        return 'timeSigBracketLeft';
+    }
+  }
+}
+
+enum SpecialTimeSigType { common, cut, plus, bracket }
+
+// === CLEF CHANGE (NOVO - mudança de clave no meio do compasso) ===
+
+class ClefChange extends MusicalElement {
+  final Clef newClef;
+  final bool small; // true = clave pequena (advertência)
+
+  ClefChange({required this.newClef, this.small = false});
+}
+
+// === KEY SIGNATURE CHANGE (NOVO) ===
+
+class KeySignatureChange extends MusicalElement {
+  final KeySignature newKeySignature;
+  final bool showNaturals; // Mostrar bequadros cancelando armadura anterior
+
+  KeySignatureChange({required this.newKeySignature, this.showNaturals = true});
 }

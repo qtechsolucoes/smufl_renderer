@@ -1,9 +1,12 @@
 // example/lib/examples/ornaments_example.dart
+// ARQUIVO UNIFICADO E CORRIGIDO
 
 import 'package:flutter/material.dart';
 import 'package:smufl_renderer/smufl_renderer.dart';
 
-/// Widget que demonstra a renderização de ornamentos musicais
+/// Widget que demonstra a renderização de todos os ornamentos musicais,
+/// seguindo as regras tipográficas profissionais.
+/// Este arquivo é a fonte única da verdade para exemplos de ornamentos.
 class OrnamentsExample extends StatelessWidget {
   const OrnamentsExample({super.key});
 
@@ -11,332 +14,71 @@ class OrnamentsExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Família de Símbolos: Ornamentos'),
-        backgroundColor: Colors.purple.shade700,
+        title: const Text('Guia Completo de Ornamentos'),
+        backgroundColor: Colors.green.shade800,
+        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 12.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildSection(
-              title: 'Trinados (Trilos) - Acima',
-              description: 'Trinados simples e com alterações cromáticas posicionados acima.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.trill, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.trillSharp, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.trillFlat, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.trillNatural, above: true)],
-                ),
-              ],
+            _buildHeader(
+              'Guia de Ornamentos SMuFL',
+              'Demonstração do posicionamento correto de ornamentos conforme as regras de notação profissional.',
             ),
             _buildSection(
-              title: 'Trinados (Trilos) - Abaixo',
-              description: 'Trinados posicionados abaixo das notas.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 5),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.trill, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 5),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.shortTrill, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 5),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.trillLigature, above: false)],
-                ),
-                Rest(duration: const Duration(DurationType.half)),
-              ],
+              title: 'Regra Fundamental: Posicionamento em Voz Única',
+              description:
+                  'Em música de voz única, ornamentos como trilos e mordentes são SEMPRE posicionados ACIMA da pauta, independentemente da direção da haste da nota.',
+              staff: _createSingleVoiceStaff(),
             ),
             _buildSection(
-              title: 'Mordentes - Acima',
-              description: 'Mordentes superiores e inferiores posicionados acima.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.mordent, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.invertedMordent, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.mordentUpperPrefix, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.mordentLowerPrefix, above: true)],
-                ),
-              ],
+              title: 'Regra de Polifonia: Múltiplas Vozes',
+              description:
+                  'Em pautas com múltiplas vozes, os ornamentos são posicionados na parte externa: acima para a voz superior (soprano) e abaixo para a voz inferior (contralto).',
+              staff: _createDoubleVoiceStaff(),
             ),
             _buildSection(
-              title: 'Mordentes - Abaixo',
-              description: 'Mordentes posicionados abaixo das notas.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.mordent, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.invertedMordent, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.mordentUpperPrefix, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.mordentLowerPrefix, above: false)],
-                ),
-              ],
+              title: 'Trilos (Trills)',
+              description:
+                  'Trinados simples e com alterações cromáticas. O posicionamento é sempre acima em voz única.',
+              staff: _createTrillsStaff(),
             ),
             _buildSection(
-              title: 'Grupetos',
+              title: 'Mordentes (Mordents)',
+              description:
+                  'Mordentes superiores e inferiores. O posicionamento segue a mesma regra dos trilos.',
+              staff: _createMordentsStaff(),
+            ),
+            _buildSection(
+              title: 'Grupetos (Turns)',
               description: 'Grupetos simples, invertidos e com corte.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.turn)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.turnInverted)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.invertedTurn)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.turnSlash)],
-                ),
-              ],
+              staff: _createTurnsStaff(),
             ),
             _buildSection(
-              title: 'Apojaturas',
-              description: 'Apojaturas superiores e inferiores, e acciaccaturas.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaUp)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.appoggiaturaDown)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.acciaccatura)],
-                ),
-                Rest(duration: const Duration(DurationType.quarter)),
-              ],
+              title: 'Apojaturas e Acciaccaturas (Grace Notes)',
+              description:
+                  'Notas de ornamento que precedem a nota principal. A ligadura para a nota principal é essencial.',
+              staff: _createGraceNotesStaff(),
             ),
             _buildSection(
-              title: 'Glissandos e Portamentos',
-              description: 'Efeitos de escorregamento entre notas.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.glissando)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                ),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.portamento)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                ),
-              ],
+              title: 'Fermatas',
+              description:
+                  'A fermata padrão é sempre acima. Versões específicas como a "fermataBelow" são usadas para posicionamento inferior explícito.',
+              staff: _createFermatasStaff(),
             ),
             _buildSection(
-              title: 'Fermatas - Acima e Abaixo',
-              description: 'Fermatas posicionadas acima e abaixo das notas.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.fermata, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.fermata, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.fermataBelow, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.half),
-                  ornaments: [Ornament(type: OrnamentType.fermataBelowInverted, above: false)],
-                ),
-              ],
+              title: 'Arpejos e Glissandos',
+              description:
+                  'Arpejos são posicionados à esquerda do acorde. Glissandos são representados por linhas entre as notas.',
+              staff: _createArpeggiosAndGlissandosStaff(),
             ),
             _buildSection(
-              title: 'Linhas Ornamentais',
-              description: 'Linhas decorativas e efeitos especiais.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.wavyLine)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.zigzagLine)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.zigZagLineNoRightEnd)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.zigZagLineWithRightEnd)],
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Ornamentos Barrocos',
-              description: 'Ornamentos especiais da música barroca e clássica.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.schleifer, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.haydn, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'E', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.trillLigature, above: false)],
-                ),
-                Rest(duration: const Duration(DurationType.quarter)),
-              ],
-            ),
-            _buildSection(
-              title: 'Efeitos Instrumentais',
-              description: 'Efeitos especiais para instrumentos de sopro e cordas.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'F', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.shake, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'G', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.bend, above: false)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'A', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.scoop, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'B', octave: 4),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.fall, above: false)],
-                ),
-              ],
-            ),
-            _buildSection(
-              title: 'Mais Efeitos Especiais',
-              description: 'Doit, plop e arpejos.',
-              elements: [
-                Clef(clefType: ClefType.treble),
-                Note(
-                  pitch: const Pitch(step: 'C', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.doit, above: true)],
-                ),
-                Note(
-                  pitch: const Pitch(step: 'D', octave: 5),
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.plop, above: false)],
-                ),
-                Chord(
-                  notes: [
-                    Note(
-                      pitch: const Pitch(step: 'E', octave: 4),
-                      duration: const Duration(DurationType.quarter),
-                    ),
-                    Note(
-                      pitch: const Pitch(step: 'G', octave: 4),
-                      duration: const Duration(DurationType.quarter),
-                    ),
-                    Note(
-                      pitch: const Pitch(step: 'B', octave: 4),
-                      duration: const Duration(DurationType.quarter),
-                    ),
-                  ],
-                  duration: const Duration(DurationType.quarter),
-                  ornaments: [Ornament(type: OrnamentType.arpeggio, above: true)],
-                ),
-                Rest(duration: const Duration(DurationType.quarter)),
-              ],
+              title: 'Efeitos de Articulação (Jazz/Moderno)',
+              description:
+                  'Scoop, Fall, Doit e Plop, comuns em notação de jazz.',
+              staff: _createJazzEffectsStaff(),
             ),
           ],
         ),
@@ -344,21 +86,41 @@ class OrnamentsExample extends StatelessWidget {
     );
   }
 
+  /// Constrói o cabeçalho da página.
+  Widget _buildHeader(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+          ),
+          const Divider(height: 32),
+        ],
+      ),
+    );
+  }
+
+  /// Constrói uma seção de exemplo com título, descrição e partitura.
   Widget _buildSection({
     required String title,
     required String description,
-    required List<MusicalElement> elements,
+    required Staff staff,
   }) {
-    final staff = Staff();
-    final measure = Measure();
-    for (final element in elements) {
-      measure.add(element);
-    }
-    staff.add(measure);
-
     return Card(
       elevation: 2.0,
       margin: const EdgeInsets.only(bottom: 24.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -389,5 +151,285 @@ class OrnamentsExample extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Exemplo da regra fundamental para voz única.
+  Staff _createSingleVoiceStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    // Nota com haste para CIMA -> Ornamento ACIMA
+    measure.add(Note(
+      pitch: const Pitch(step: 'E', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.trill)],
+    ));
+    // Nota com haste para BAIXO -> Ornamento ACIMA
+    measure.add(Note(
+      pitch: const Pitch(step: 'C', octave: 5),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.mordent)],
+    ));
+    // Nota muito grave (haste para CIMA) -> Ornamento ACIMA
+    measure.add(Note(
+      pitch: const Pitch(step: 'D', octave: 3),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.turn)],
+    ));
+    // Nota muito aguda (haste para BAIXO) -> Ornamento ACIMA
+    measure.add(Note(
+      pitch: const Pitch(step: 'A', octave: 5),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.shortTrill)],
+    ));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo da regra para múltiplas vozes.
+  Staff _createDoubleVoiceStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+    measure.add(TimeSignature(numerator: 2, denominator: 4));
+
+    // Voz 1 (Soprano) - Hastes para CIMA, Ornamentos ACIMA
+    measure.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      voice: 1,
+      ornaments: [Ornament(type: OrnamentType.trill)],
+    ));
+
+    // Voz 2 (Contralto) - Hastes para BAIXO, Ornamentos ABAIXO
+    measure.add(Note(
+      pitch: const Pitch(step: 'F', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      voice: 2,
+      ornaments: [Ornament(type: OrnamentType.mordent)],
+    ));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em Trilos.
+  Staff _createTrillsStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    measure.add(Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.trill)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.trillSharp)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'B', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.trillFlat)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'C', octave: 5),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.shortTrill)],
+    ));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em Mordentes.
+  Staff _createMordentsStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    measure.add(Note(
+      pitch: const Pitch(step: 'F', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.mordent)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.invertedMordent)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.mordentUpperPrefix)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'B', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.mordentLowerPrefix)],
+    ));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em Grupetos.
+  Staff _createTurnsStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    measure.add(Note(
+      pitch: const Pitch(step: 'E', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.turn)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'F', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.turnInverted)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.turnSlash)],
+    ));
+    measure.add(Rest(duration: const Duration(DurationType.quarter)));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em Notas de Graça.
+  Staff _createGraceNotesStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    // Acciaccatura (com corte)
+    measure.add(GraceNote(
+      note: Note(
+          pitch: const Pitch(step: 'D', octave: 5),
+          duration: const Duration(DurationType.eighth)),
+      isAcciaccatura: true,
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'C', octave: 5),
+      duration: const Duration(DurationType.quarter),
+    ));
+
+    // Appoggiatura (sem corte)
+    measure.add(GraceNote(
+      note: Note(
+          pitch: const Pitch(step: 'F', octave: 5),
+          duration: const Duration(DurationType.eighth)),
+      isAcciaccatura: false,
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'E', octave: 5),
+      duration: const Duration(DurationType.half),
+    ));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em Fermatas.
+  Staff _createFermatasStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    // Fermata padrão acima
+    measure.add(Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const Duration(DurationType.half),
+      ornaments: [Ornament(type: OrnamentType.fermata)],
+    ));
+
+    // Fermata explícita abaixo
+    measure.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.half),
+      ornaments: [Ornament(type: OrnamentType.fermataBelow)],
+    ));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em Arpejos e Glissandos.
+  Staff _createArpeggiosAndGlissandosStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    // Arpejo
+    measure.add(Chord(
+      notes: [
+        Note(
+            pitch: const Pitch(step: 'C', octave: 4),
+            duration: const Duration(DurationType.quarter)),
+        Note(
+            pitch: const Pitch(step: 'E', octave: 4),
+            duration: const Duration(DurationType.quarter)),
+        Note(
+            pitch: const Pitch(step: 'G', octave: 4),
+            duration: const Duration(DurationType.quarter)),
+      ],
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.arpeggio)],
+    ));
+
+    // Glissando (requer duas notas para desenhar a linha)
+    measure.add(Note(
+      pitch: const Pitch(step: 'C', octave: 5),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.glissando)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'G', octave: 5),
+      duration: const Duration(DurationType.quarter),
+    ));
+
+    measure.add(Rest(duration: const Duration(DurationType.quarter)));
+
+    staff.add(measure);
+    return staff;
+  }
+
+  /// Exemplo focado em efeitos de jazz e música moderna.
+  Staff _createJazzEffectsStaff() {
+    final staff = Staff();
+    final measure = Measure();
+    measure.add(Clef(clefType: ClefType.treble));
+
+    measure.add(Note(
+      pitch: const Pitch(step: 'C', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.scoop)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'E', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.fall)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'G', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.doit)],
+    ));
+    measure.add(Note(
+      pitch: const Pitch(step: 'A', octave: 4),
+      duration: const Duration(DurationType.quarter),
+      ornaments: [Ornament(type: OrnamentType.plop)],
+    ));
+
+    staff.add(measure);
+    return staff;
   }
 }

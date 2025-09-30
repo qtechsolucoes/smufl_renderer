@@ -15,7 +15,9 @@
       "Bash(dart compile:*)",
       "WebSearch",
       "WebFetch(domain:vexflow.github.io)",
-      "Read(//c/Users/aless/OneDrive/Imagens/**)"
+      "Read(//c/Users/aless/OneDrive/Imagens/**)",
+      "Bash(cat:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

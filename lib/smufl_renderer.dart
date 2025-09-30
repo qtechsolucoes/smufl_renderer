@@ -1,4 +1,5 @@
 // lib/smufl_renderer.dart
+// VERSÃO CORRIGIDA: Widget principal com todas as melhorias
 
 import 'package:flutter/material.dart';
 import 'src/layout/layout_engine.dart';
@@ -17,6 +18,7 @@ export 'src/smufl/glyph_categories.dart';
 export 'src/smufl/smufl_metadata_loader.dart';
 
 /// Widget principal para renderização de partituras musicais
+/// VERSÃO CORRIGIDA E COMPLETA
 class MusicScore extends StatefulWidget {
   final Staff staff;
   final MusicScoreTheme theme;
@@ -26,7 +28,7 @@ class MusicScore extends StatefulWidget {
     super.key,
     required this.staff,
     this.theme = const MusicScoreTheme(),
-    this.staffSpace = 12.0, // Valor padrão otimizado para legibilidade
+    this.staffSpace = 12.0,
   });
 
   @override
@@ -59,21 +61,18 @@ class _MusicScoreState extends State<MusicScore> {
 
         return LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            // Criar o motor de layout
             final layoutEngine = LayoutEngine(
               widget.staff,
               availableWidth: constraints.maxWidth,
               staffSpace: widget.staffSpace,
             );
 
-            // Calcular posições dos elementos
             final positionedElements = layoutEngine.layout();
 
             if (positionedElements.isEmpty) {
               return const Center(child: Text('Partitura vazia'));
             }
 
-            // Calcular altura necessária
             final totalHeight = _calculateTotalHeight(positionedElements);
 
             return SingleChildScrollView(
@@ -100,7 +99,6 @@ class _MusicScoreState extends State<MusicScore> {
   double _calculateTotalHeight(List<PositionedElement> elements) {
     if (elements.isEmpty) return 200;
 
-    // Encontrar o último sistema
     int maxSystem = 0;
     for (final element in elements) {
       if (element.system > maxSystem) {
@@ -108,15 +106,15 @@ class _MusicScoreState extends State<MusicScore> {
       }
     }
 
-    // Altura = margem superior + (número de sistemas * altura do sistema) + margem inferior
-    final systemHeight = widget.staffSpace * 5; // Altura de cada sistema
-    final margins = widget.staffSpace * 2; // Margens superior e inferior
+    final systemHeight = widget.staffSpace * 10;
+    final margins = widget.staffSpace * 6;
 
-    return margins + ((maxSystem + 2) * systemHeight);
+    return margins + ((maxSystem + 1) * systemHeight);
   }
 }
 
 /// Painter customizado para renderização da partitura
+/// VERSÃO CORRIGIDA: Usa StaffRenderer melhorado
 class MusicScorePainter extends CustomPainter {
   final List<PositionedElement> positionedElements;
   final SmuflMetadata metadata;
@@ -132,6 +130,8 @@ class MusicScorePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (metadata.isNotLoaded || positionedElements.isEmpty) return;
+
     // Agrupar elementos por sistema
     final Map<int, List<PositionedElement>> systemGroups = {};
 
@@ -144,24 +144,20 @@ class MusicScorePainter extends CustomPainter {
       final systemIndex = entry.key;
       final elements = entry.value;
 
-      // Calcular posição base do sistema
       final systemY = (systemIndex * staffSpace * 10) + (staffSpace * 5);
       final staffBaseline = Offset(0, systemY);
 
-      // Criar sistema de coordenadas para este sistema
       final coordinates = StaffCoordinateSystem(
         staffSpace: staffSpace,
         staffBaseline: staffBaseline,
       );
 
-      // Criar renderizador
       final renderer = StaffRenderer(
         coordinates: coordinates,
         metadata: metadata,
         theme: theme,
       );
 
-      // Renderizar o sistema
       renderer.renderStaff(canvas, elements, size);
     }
   }

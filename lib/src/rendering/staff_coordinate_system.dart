@@ -32,11 +32,18 @@ class StaffCoordinateSystem {
 
   /// Converte posição de nota (step + octave) para posição Y na pauta
   /// Para clave de sol: G4 fica na linha 2, C5 no espaço acima da pauta
+  /// Para clave de fá: D3 fica na linha 4 (baseline = 3ª linha)
+  /// Para clave de dó: C4 fica na linha 3 (baseline)
   double getNoteY(String step, int octave, {String clef = 'treble'}) {
     if (clef == 'treble' || clef == 'g') {
       return _getTrebleClefNoteY(step, octave);
+    } else if (clef == 'bass' || clef == 'f') {
+      return _getBassClefNoteY(step, octave);
+    } else if (clef == 'alto' || clef == 'c') {
+      return _getAltoClefNoteY(step, octave);
+    } else if (clef == 'tenor') {
+      return _getTenorClefNoteY(step, octave);
     }
-    // Adicionar outras claves aqui no futuro
     return staffBaseline.dy;
   }
 
@@ -74,30 +81,189 @@ class StaffCoordinateSystem {
     return noteY;
   }
 
+  double _getBassClefNoteY(String step, int octave) {
+    // Clave de Fá: F3 = 4ª linha, D3 = 3ª linha (baseline)
+    // staffBaseline = 3ª linha da pauta (D3 na clave de Fá)
+
+    final stepToDiatonic = {
+      'C': 0,
+      'D': 1,
+      'E': 2,
+      'F': 3,
+      'G': 4,
+      'A': 5,
+      'B': 6,
+    };
+
+    // D3 = linha central (baseline) = posição 0
+    const refStep = 'D';
+    const refOctave = 3;
+    final refDiatonicPos = stepToDiatonic[refStep]!;
+
+    final noteDiatonicPos = stepToDiatonic[step.toUpperCase()] ?? 0;
+
+    final diatonicSteps =
+        (noteDiatonicPos - refDiatonicPos) + ((octave - refOctave) * 7);
+
+    final noteY = staffBaseline.dy - (diatonicSteps * staffSpace * 0.5);
+
+    return noteY;
+  }
+
+  double _getAltoClefNoteY(String step, int octave) {
+    // Clave de Dó (Alto): C4 = 3ª linha (baseline)
+    // staffBaseline = 3ª linha da pauta (C4 na clave de Dó)
+
+    final stepToDiatonic = {
+      'C': 0,
+      'D': 1,
+      'E': 2,
+      'F': 3,
+      'G': 4,
+      'A': 5,
+      'B': 6,
+    };
+
+    // C4 = linha central (baseline) = posição 0
+    const refStep = 'C';
+    const refOctave = 4;
+    final refDiatonicPos = stepToDiatonic[refStep]!;
+
+    final noteDiatonicPos = stepToDiatonic[step.toUpperCase()] ?? 0;
+
+    final diatonicSteps =
+        (noteDiatonicPos - refDiatonicPos) + ((octave - refOctave) * 7);
+
+    final noteY = staffBaseline.dy - (diatonicSteps * staffSpace * 0.5);
+
+    return noteY;
+  }
+
+  double _getTenorClefNoteY(String step, int octave) {
+    // Clave de Dó (Tenor): C4 = 4ª linha
+    // staffBaseline = 3ª linha da pauta, mas C4 está uma linha acima
+
+    final stepToDiatonic = {
+      'C': 0,
+      'D': 1,
+      'E': 2,
+      'F': 3,
+      'G': 4,
+      'A': 5,
+      'B': 6,
+    };
+
+    // A3 = linha central (baseline) para clave de tenor
+    const refStep = 'A';
+    const refOctave = 3;
+    final refDiatonicPos = stepToDiatonic[refStep]!;
+
+    final noteDiatonicPos = stepToDiatonic[step.toUpperCase()] ?? 0;
+
+    final diatonicSteps =
+        (noteDiatonicPos - refDiatonicPos) + ((octave - refOctave) * 7);
+
+    final noteY = staffBaseline.dy - (diatonicSteps * staffSpace * 0.5);
+
+    return noteY;
+  }
+
   /// Retorna posições para acidentes na armadura de clave
   List<double> getKeySignaturePositions(int count, {String clef = 'treble'}) {
     if (clef == 'treble' || clef == 'g') {
       if (count > 0) {
         // Sustenidos em clave de sol: F# C# G# D# A# E# B#
         return [
-          getNoteY('F', 5), // F#
-          getNoteY('C', 5), // C#
-          getNoteY('G', 5), // G#
-          getNoteY('D', 5), // D#
-          getNoteY('A', 4), // A#
-          getNoteY('E', 5), // E#
-          getNoteY('B', 4), // B#
+          getNoteY('F', 5, clef: clef), // F#
+          getNoteY('C', 5, clef: clef), // C#
+          getNoteY('G', 5, clef: clef), // G#
+          getNoteY('D', 5, clef: clef), // D#
+          getNoteY('A', 4, clef: clef), // A#
+          getNoteY('E', 5, clef: clef), // E#
+          getNoteY('B', 4, clef: clef), // B#
         ].take(count).toList();
       } else {
         // Bemóis em clave de sol: Bb Eb Ab Db Gb Cb Fb
         return [
-          getNoteY('B', 4), // Bb
-          getNoteY('E', 5), // Eb
-          getNoteY('A', 4), // Ab
-          getNoteY('D', 5), // Db
-          getNoteY('G', 4), // Gb
-          getNoteY('C', 5), // Cb
-          getNoteY('F', 4), // Fb
+          getNoteY('B', 4, clef: clef), // Bb
+          getNoteY('E', 5, clef: clef), // Eb
+          getNoteY('A', 4, clef: clef), // Ab
+          getNoteY('D', 5, clef: clef), // Db
+          getNoteY('G', 4, clef: clef), // Gb
+          getNoteY('C', 5, clef: clef), // Cb
+          getNoteY('F', 4, clef: clef), // Fb
+        ].take(count.abs()).toList();
+      }
+    } else if (clef == 'bass' || clef == 'f') {
+      if (count > 0) {
+        // Sustenidos em clave de fá: F# C# G# D# A# E# B#
+        return [
+          getNoteY('F', 3, clef: clef), // F#
+          getNoteY('C', 4, clef: clef), // C#
+          getNoteY('G', 3, clef: clef), // G#
+          getNoteY('D', 4, clef: clef), // D#
+          getNoteY('A', 2, clef: clef), // A#
+          getNoteY('E', 3, clef: clef), // E#
+          getNoteY('B', 2, clef: clef), // B#
+        ].take(count).toList();
+      } else {
+        // Bemóis em clave de fá: Bb Eb Ab Db Gb Cb Fb
+        return [
+          getNoteY('B', 2, clef: clef), // Bb
+          getNoteY('E', 3, clef: clef), // Eb
+          getNoteY('A', 2, clef: clef), // Ab
+          getNoteY('D', 3, clef: clef), // Db
+          getNoteY('G', 2, clef: clef), // Gb
+          getNoteY('C', 3, clef: clef), // Cb
+          getNoteY('F', 2, clef: clef), // Fb
+        ].take(count.abs()).toList();
+      }
+    } else if (clef == 'alto' || clef == 'c') {
+      if (count > 0) {
+        // Sustenidos em clave de dó (alto): F# C# G# D# A# E# B#
+        return [
+          getNoteY('F', 4, clef: clef), // F#
+          getNoteY('C', 5, clef: clef), // C#
+          getNoteY('G', 4, clef: clef), // G#
+          getNoteY('D', 5, clef: clef), // D#
+          getNoteY('A', 3, clef: clef), // A#
+          getNoteY('E', 4, clef: clef), // E#
+          getNoteY('B', 3, clef: clef), // B#
+        ].take(count).toList();
+      } else {
+        // Bemóis em clave de dó (alto): Bb Eb Ab Db Gb Cb Fb
+        return [
+          getNoteY('B', 3, clef: clef), // Bb
+          getNoteY('E', 4, clef: clef), // Eb
+          getNoteY('A', 3, clef: clef), // Ab
+          getNoteY('D', 4, clef: clef), // Db
+          getNoteY('G', 3, clef: clef), // Gb
+          getNoteY('C', 4, clef: clef), // Cb
+          getNoteY('F', 3, clef: clef), // Fb
+        ].take(count.abs()).toList();
+      }
+    } else if (clef == 'tenor') {
+      if (count > 0) {
+        // Sustenidos em clave de tenor: F# C# G# D# A# E# B#
+        return [
+          getNoteY('F', 4, clef: clef), // F#
+          getNoteY('C', 5, clef: clef), // C#
+          getNoteY('G', 4, clef: clef), // G#
+          getNoteY('D', 5, clef: clef), // D#
+          getNoteY('A', 4, clef: clef), // A#
+          getNoteY('E', 5, clef: clef), // E#
+          getNoteY('B', 4, clef: clef), // B#
+        ].take(count).toList();
+      } else {
+        // Bemóis em clave de tenor: Bb Eb Ab Db Gb Cb Fb
+        return [
+          getNoteY('B', 4, clef: clef), // Bb
+          getNoteY('E', 5, clef: clef), // Eb
+          getNoteY('A', 4, clef: clef), // Ab
+          getNoteY('D', 5, clef: clef), // Db
+          getNoteY('G', 4, clef: clef), // Gb
+          getNoteY('C', 5, clef: clef), // Cb
+          getNoteY('F', 4, clef: clef), // Fb
         ].take(count.abs()).toList();
       }
     }

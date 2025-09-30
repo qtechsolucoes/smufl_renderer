@@ -23,6 +23,12 @@ import 'examples/flags_vs_beams_example.dart';
 import 'examples/professional_ornaments_example.dart';
 import 'examples/corrected_ornaments_example.dart';
 
+// Novos exemplos completos
+import 'examples/complete_clefs_demo.dart';
+import 'examples/complete_articulations_ornaments.dart';
+import 'examples/complete_advanced_elements.dart';
+import 'examples/complete_music_piece.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -82,6 +88,10 @@ class _MainScreenState extends State<MainScreen> {
     'Bandeiras vs Barras',
     'Ornamentos Profissionais',
     'Ornamentos Corrigidos',
+    '🎼 DEMO: Todas as Claves',
+    '🎵 DEMO: Articulações Completas',
+    '🎸 DEMO: Elementos Avançados',
+    '🎹 DEMO: Peça Musical Completa',
   ];
 
   final List<Widget> _pages = const [
@@ -103,6 +113,11 @@ class _MainScreenState extends State<MainScreen> {
     FlagsVsBeamsExample(),
     ProfessionalOrnamentsExample(),
     CorrectedOrnamentsExample(),
+    // Novos exemplos completos
+    CompleteClefsDemoExample(),
+    CompleteArticulationsOrnamentsExample(),
+    CompleteAdvancedElementsExample(),
+    CompleteMusicPieceExample(),
   ];
 
   @override

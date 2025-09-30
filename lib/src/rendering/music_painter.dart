@@ -814,9 +814,8 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
       staffSpace,
     );
     final paint = PerformanceOptimizer.getPaint(
-      color: theme.staffLineColor,
-      strokeWidth: metadata.getEngravingDefault('staffLineThickness'),
-      style: PaintingStyle.stroke,
+      theme.staffLineColor,
+      metadata.getEngravingDefault('staffLineThickness'),
     );
 
     canvas.drawPath(path, paint);
@@ -1175,11 +1174,11 @@ class MusicPainter extends CustomPainter with AdvancedMusicPainterMixin {
     final character = metadata.getCodepoint(glyphName);
     if (character.isNotEmpty) {
       PerformanceOptimizer.drawOptimizedSmuflText(
-        canvas,
-        character,
-        Offset(x, y),
-        fontSize,
-        color,
+        canvas: canvas,
+        character: character,
+        position: Offset(x, y),
+        size: fontSize,
+        color: color,
       );
     }
   }
