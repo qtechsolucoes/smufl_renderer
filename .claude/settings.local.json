@@ -17,7 +17,8 @@
       "WebFetch(domain:vexflow.github.io)",
       "Read(//c/Users/aless/OneDrive/Imagens/**)",
       "Bash(cat:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Read(//c/**)"
     ],
     "deny": [],
     "ask": []

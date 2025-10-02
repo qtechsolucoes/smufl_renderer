@@ -1,74 +1,35 @@
 // lib/src/rendering/renderers/group_renderer.dart
 
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-
 import '../../layout/layout_engine.dart';
 import '../../music_model/musical_element.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
+import '../smufl_positioning_engine.dart';
 import '../staff_coordinate_system.dart';
 
-/// Renderizador especialista em desenhar elementos que agrupam ou conectam
-/// outras notas, como Beams (barras), Slurs (ligaduras de expressão) e
-/// Ties (ligaduras de valor).
 class GroupRenderer {
-  final Canvas canvas;
-  final List<PositionedElement> elements;
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
   final double staffLineThickness;
   final double stemThickness;
-  final Clef currentClef;
+  late final SMuFLPositioningEngine positioningEngine;
 
   GroupRenderer({
-    required this.canvas,
-    required this.elements,
     required this.coordinates,
     required this.metadata,
     required this.theme,
     required this.glyphSize,
     required this.staffLineThickness,
     required this.stemThickness,
-    required this.currentClef,
-  });
-
-  // ################# BEAM RENDERING #################
-
-  void renderBeams() {
-    final beamGroups = _identifyBeamGroups();
-    for (final group in beamGroups.values) {
-      if (group.length < 2) continue;
-
-      final positions = <Offset>[];
-      final staffPositions = <int>[];
-      final durations = <DurationType>[];
-
-      for (final index in group) {
-        final element = elements[index];
-        if (element.element is Note) {
-          final note = element.element as Note;
-          final staffPos = _calculateStaffPosition(note.pitch);
-          final noteY =
-              coordinates.staffBaseline.dy -
-              (staffPos * coordinates.staffSpace * 0.5);
-          positions.add(Offset(element.position.dx, noteY));
-          staffPositions.add(staffPos);
-          durations.add(note.duration.type);
-        }
-      }
-
-      final avgPos =
-          staffPositions.reduce((a, b) => a + b) / staffPositions.length;
-      final stemUp = avgPos < 0;
-
-      _renderBeamGroup(positions, staffPositions, durations, stemUp);
-    }
+  }) {
+    // Initialize with already loaded metadata
+    positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
   }
 
-  Map<int, List<int>> _identifyBeamGroups() {
+  Map<int, List<int>> _identifyBeamGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
     for (int i = 0; i < elements.length; i++) {
@@ -77,11 +38,11 @@ class GroupRenderer {
         final group = <int>[i];
         for (int j = i + 1; j < elements.length; j++) {
           final nextElement = elements[j].element;
-          if (nextElement is Note && nextElement.beam != null) {
+          if (nextElement is Note) {
             group.add(j);
             if (nextElement.beam == BeamType.end) break;
           } else {
-            break; // Interrompe se encontrar um elemento que não seja uma nota com beam
+            break;
           }
         }
         if (group.length >= 2) {
@@ -92,15 +53,55 @@ class GroupRenderer {
     return groups;
   }
 
+  void renderBeams(
+    Canvas canvas,
+    List<PositionedElement> elements,
+    Clef currentClef,
+  ) {
+    final beamGroups = _identifyBeamGroups(elements);
+    for (final group in beamGroups.values) {
+      if (group.length < 2) continue;
+
+      final positions = <Offset>[];
+      final staffPositions = <int>[];
+      final durations = <DurationType>[];
+      final groupElements = <PositionedElement>[];
+
+      for (final index in group) {
+        final element = elements[index];
+        groupElements.add(element);
+        if (element.element is Note) {
+          final note = element.element as Note;
+          final staffPos = _calculateStaffPosition(note.pitch, currentClef);
+          final noteY =
+              coordinates.staffBaseline.dy -
+              (staffPos * coordinates.staffSpace * 0.5);
+          positions.add(Offset(element.position.dx, noteY));
+          staffPositions.add(staffPos);
+          durations.add(note.duration.type);
+        }
+      }
+      if (staffPositions.isNotEmpty) {
+        final avgPos =
+            staffPositions.reduce((a, b) => a + b) / staffPositions.length;
+        final stemUp = avgPos <= 0;
+        _renderBeamGroup(canvas, groupElements, positions, durations, stemUp);
+      }
+    }
+  }
+
   void _renderBeamGroup(
+    Canvas canvas,
+    List<PositionedElement> groupElements,
     List<Offset> positions,
-    List<int> staffPositions,
     List<DurationType> durations,
     bool stemUp,
   ) {
+    if (positions.length < 2) return;
+
     int maxBeams = 0;
-    final beamCounts = durations.map((d) {
-      final beams = switch (d) {
+    final beamCounts = durations.map((duration) {
+      final beams = switch (duration) {
         DurationType.eighth => 1,
         DurationType.sixteenth => 2,
         DurationType.thirtySecond => 3,
@@ -111,35 +112,70 @@ class GroupRenderer {
       return beams;
     }).toList();
 
-    double stemHeightFactor = 3.5 + (maxBeams > 2 ? (maxBeams - 2) * 0.4 : 0);
-    final stemHeight = coordinates.staffSpace * stemHeightFactor;
+    // Configurar fator de altura da haste baseado no número de feixes
+    // (valores usados para cálculo de espaçamento no futuro)
+    final beamThickness =
+        metadata.getEngravingDefault('beamThickness') * coordinates.staffSpace;
+    final beamSpacing = beamThickness * 1.5;
 
+    // CORREÇÃO SMuFL: Usar âncoras das cabeças de nota
     final stemEndpoints = <Offset>[];
+    final staffPositions = <int>[];
+
     for (int i = 0; i < positions.length; i++) {
-      final noteWidth = coordinates.staffSpace * 1.18;
-      final stemX = stemUp
-          ? positions[i].dx + (noteWidth * 0.45)
-          : positions[i].dx - (noteWidth * 0.45);
-      stemEndpoints.add(Offset(stemX, positions[i].dy));
+      final element = groupElements[i].element as Note;
+      final noteGlyph = durations[i].glyphName;
+      final staffPos = _calculateStaffPosition(element.pitch, Clef(clefType: ClefType.treble));
+
+      staffPositions.add(staffPos);
+
+      // Usar âncora SMuFL para posição da haste
+      final stemAnchor = stemUp
+          ? positioningEngine.getStemUpAnchor(noteGlyph)
+          : positioningEngine.getStemDownAnchor(noteGlyph);
+
+      final stemX = positions[i].dx + (stemAnchor.dx * coordinates.staffSpace);
+      final stemY = positions[i].dy + (stemAnchor.dy * coordinates.staffSpace);
+      stemEndpoints.add(Offset(stemX, stemY));
     }
 
-    final firstNotePos = staffPositions.first;
-    final lastNotePos = staffPositions.last;
-    final y_start = stemUp
-        ? positions.first.dy - stemHeight
-        : positions.first.dy + stemHeight;
-    final y_end = stemUp
-        ? positions.last.dy - stemHeight
-        : positions.last.dy + stemHeight;
+    // CORREÇÃO SMuFL: Calcular ângulo do feixe usando positioning engine
+    // Baseado em Ted Ross e Behind Bars
+    final beamAngleSpaces = positioningEngine.calculateBeamAngle(
+      noteStaffPositions: staffPositions,
+      stemUp: stemUp,
+    );
 
-    final firstStem = Offset(stemEndpoints.first.dx, y_start);
-    final lastStem = Offset(stemEndpoints.last.dx, y_end);
+    // Calcular altura do feixe usando positioning engine
+    final beamHeightSpaces = positioningEngine.calculateBeamHeight(
+      staffPosition: staffPositions.first,
+      stemUp: stemUp,
+      allStaffPositions: staffPositions,
+    );
+    final beamHeightPixels = beamHeightSpaces * coordinates.staffSpace;
 
-    final slope = (lastStem.dy - firstStem.dy) / (lastStem.dx - firstStem.dx);
-    final clampedSlope = slope.isFinite ? slope.clamp(-0.5, 0.5) : 0.0;
+    // Primeira e última posição do feixe
+    final firstNoteY = positions.first.dy;
+    final lastNoteY = positions.last.dy;
+    final avgNoteY = (firstNoteY + lastNoteY) / 2;
 
-    double getBeamY(double x) =>
-        firstStem.dy + (clampedSlope * (x - firstStem.dx));
+    final beamBaseY = stemUp
+        ? avgNoteY - beamHeightPixels
+        : avgNoteY + beamHeightPixels;
+
+    // Converter ângulo de spaces para slope pixel
+    final xDistance = stemEndpoints.last.dx - stemEndpoints.first.dx;
+    final beamAnglePixels = (beamAngleSpaces * coordinates.staffSpace);
+    final beamSlope = xDistance > 0 ? beamAnglePixels / xDistance : 0.0;
+
+    final firstStem = Offset(
+      stemEndpoints.first.dx,
+      beamBaseY,
+    );
+
+    double getBeamY(double x) {
+      return firstStem.dy + (beamSlope * (x - firstStem.dx));
+    }
 
     final stemPaint = Paint()
       ..color = theme.stemColor
@@ -147,10 +183,54 @@ class GroupRenderer {
     final beamPaint = Paint()
       ..color = theme.beamColor ?? theme.stemColor
       ..style = PaintingStyle.fill;
-    final beamThickness =
-        metadata.getEngravingDefault('beamThickness') * coordinates.staffSpace;
-    final beamSpacing = beamThickness * 1.5;
 
+    // Draw beams
+    for (int beamLevel = 0; beamLevel < maxBeams; beamLevel++) {
+      Path? currentPath;
+      int pathStartIndex = -1;
+      for (int i = 0; i < groupElements.length; i++) {
+        if (beamCounts[i] > beamLevel) {
+          if (currentPath == null) {
+            currentPath = Path();
+            pathStartIndex = i;
+          }
+        }
+        bool shouldEndPath = false;
+        if (i == groupElements.length - 1) {
+          shouldEndPath = currentPath != null;
+        } else {
+          if (beamCounts[i] > beamLevel && beamCounts[i + 1] <= beamLevel) {
+            shouldEndPath = true;
+          }
+        }
+        if (shouldEndPath && currentPath != null && pathStartIndex >= 0) {
+          int endIndex = i;
+          if (beamCounts[i] <= beamLevel && i > pathStartIndex) {
+            endIndex = i - 1;
+          }
+          if (pathStartIndex <= endIndex) {
+            final yOffset = stemUp
+                ? beamLevel * beamSpacing
+                : -beamLevel * beamSpacing;
+            final startX = stemEndpoints[pathStartIndex].dx;
+            final endX = stemEndpoints[endIndex].dx;
+            final startY = getBeamY(startX) + yOffset;
+            final endY = getBeamY(endX) + yOffset;
+            final beamDirection = stemUp ? 1.0 : -1.0;
+            currentPath.moveTo(startX, startY);
+            currentPath.lineTo(endX, endY);
+            currentPath.lineTo(endX, endY + beamThickness * beamDirection);
+            currentPath.lineTo(startX, startY + beamThickness * beamDirection);
+            currentPath.close();
+            canvas.drawPath(currentPath, beamPaint);
+          }
+          currentPath = null;
+          pathStartIndex = -1;
+        }
+      }
+    }
+
+    // Draw stems
     for (int i = 0; i < positions.length; i++) {
       final stemX = stemEndpoints[i].dx;
       final beamY = getBeamY(stemX);
@@ -160,212 +240,113 @@ class GroupRenderer {
         stemPaint,
       );
     }
-
-    for (int beamLevel = 0; beamLevel < maxBeams; beamLevel++) {
-      // Lógica complexa de desenho de beams parciais
-    }
-    final mainBeamYOffset = stemUp ? 0.0 : -beamThickness;
-    final mainBeamPath = Path()
-      ..moveTo(firstStem.dx, getBeamY(firstStem.dx) + mainBeamYOffset)
-      ..lineTo(lastStem.dx, getBeamY(lastStem.dx) + mainBeamYOffset)
-      ..lineTo(
-        lastStem.dx,
-        getBeamY(lastStem.dx) + beamThickness + mainBeamYOffset,
-      )
-      ..lineTo(
-        firstStem.dx,
-        getBeamY(firstStem.dx) + beamThickness + mainBeamYOffset,
-      )
-      ..close();
-    canvas.drawPath(mainBeamPath, beamPaint);
   }
 
-  // ################# TIE RENDERING #################
-
-  void renderTies() {
-    final tieGroups = _identifyTieGroups();
-    for (final group in tieGroups.values) {
-      if (group.length < 2) continue;
-      final startElement = elements[group.first];
-      final endElement = elements[group.last];
-      if (startElement.element is Note) {
-        _renderSingleTie(startElement, endElement);
-      } else if (startElement.element is Chord) {
-        _renderChordTies(startElement, endElement);
-      }
-    }
-  }
-
-  Map<int, List<int>> _identifyTieGroups() {
+  Map<int, List<int>> _identifyTieGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
     for (int i = 0; i < elements.length; i++) {
       final element = elements[i].element;
-      TieType? tieType;
-      if (element is Note)
-        tieType = element.tie;
-      else if (element is Chord)
-        tieType = element.tie;
-
-      if (tieType == TieType.start) {
+      if (element is Note && element.tie == TieType.start) {
         final group = <int>[i];
         for (int j = i + 1; j < elements.length; j++) {
-          final startEl = elements[i].element;
-          final nextEl = elements[j].element;
-          bool isMatch = false;
-          TieType? nextTieType;
-
-          if (startEl is Note && nextEl is Note) {
-            isMatch = startEl.pitch == nextEl.pitch;
-            nextTieType = nextEl.tie;
-          } else if (startEl is Chord && nextEl is Chord) {
-            isMatch = startEl.notes.length == nextEl.notes.length;
-            nextTieType = nextEl.tie;
-          }
-
-          if (isMatch) {
+          final nextElement = elements[j].element;
+          if (nextElement is Note &&
+              nextElement.pitch.step == (element).pitch.step &&
+              nextElement.pitch.octave == element.pitch.octave) {
             group.add(j);
-            if (nextTieType == TieType.end) break;
+            if (nextElement.tie == TieType.end) break;
           }
         }
-        if (group.length > 1) groups[groupId++] = group;
+        if (group.length >= 2) {
+          groups[groupId++] = group;
+        }
       }
     }
     return groups;
   }
 
-  void _renderChordTies(
-    PositionedElement startChordEl,
-    PositionedElement endChordEl,
+  void renderTies(
+    Canvas canvas,
+    List<PositionedElement> elements,
+    Clef currentClef,
   ) {
-    final startChord = startChordEl.element as Chord;
-    final endChord = endChordEl.element as Chord;
-    if (startChord.notes.length != endChord.notes.length) return;
+    final tieGroups = _identifyTieGroups(elements);
+    for (final group in tieGroups.values) {
+      final startElement = elements[group.first];
+      final endElement = elements[group.last];
+      if (startElement.element is! Note || endElement.element is! Note) {
+        continue;
+      }
 
-    final startPositions = startChord.notes
-        .map((n) => _calculateStaffPosition(n.pitch))
-        .toList();
-    final mostExtremePos = startPositions.reduce(
-      (a, b) => a.abs() > b.abs() ? a : b,
-    );
-    final curveUp = mostExtremePos < 0;
+      final startNote = startElement.element as Note;
+      final startStaffPos = _calculateStaffPosition(
+        startNote.pitch,
+        currentClef,
+      );
 
-    for (int i = 0; i < startChord.notes.length; i++) {
-      final startStaffPos = startPositions[i];
-      final endStaffPos = _calculateStaffPosition(endChord.notes[i].pitch);
+      // CORREÇÃO LACERDA: "Ligaduras ficam do lado OPOSTO das hastes"
+      // Se haste para cima, ligadura embaixo; se haste para baixo, ligadura em cima
+      final stemUp = startStaffPos <= 0; // Haste para cima quando nota está abaixo/na linha central
+      final tieAbove = !stemUp; // Ligadura oposta à haste
+
       final startNoteY =
           coordinates.staffBaseline.dy -
           (startStaffPos * coordinates.staffSpace * 0.5);
       final endNoteY =
           coordinates.staffBaseline.dy -
-          (endStaffPos * coordinates.staffSpace * 0.5);
-      _drawTieCurve(
-        startChordEl.position.dx,
-        startNoteY,
-        endChordEl.position.dx,
-        endNoteY,
-        curveUp,
+          (_calculateStaffPosition(
+                (endElement.element as Note).pitch,
+                currentClef,
+              ) *
+              coordinates.staffSpace *
+              0.5);
+      final noteWidth = coordinates.staffSpace * 1.18;
+
+      // CORREÇÃO: Ligadura começa e termina nas bordas das cabeças
+      final startPoint = Offset(
+        startElement.position.dx + noteWidth * 0.6,
+        startNoteY + (tieAbove ? -coordinates.staffSpace * 0.2 : coordinates.staffSpace * 0.2),
       );
-    }
-  }
+      final endPoint = Offset(
+        endElement.position.dx + noteWidth * 0.4,
+        endNoteY + (tieAbove ? -coordinates.staffSpace * 0.2 : coordinates.staffSpace * 0.2),
+      );
 
-  void _renderSingleTie(
-    PositionedElement startNoteEl,
-    PositionedElement endNoteEl,
-  ) {
-    final startNote = startNoteEl.element as Note;
-    final startStaffPos = _calculateStaffPosition(startNote.pitch);
-    final stemUp = startStaffPos <= 0;
-    final curveUp = !stemUp;
+      // CORREÇÃO LACERDA: Ligadura com curva suave, altura proporcional à distância
+      final distance = (endPoint.dx - startPoint.dx).abs();
+      final curvatureHeight = (distance * 0.08).clamp(
+        coordinates.staffSpace * 0.3,
+        coordinates.staffSpace * 0.8,
+      );
 
-    final startNoteY =
-        coordinates.staffBaseline.dy -
-        (startStaffPos * coordinates.staffSpace * 0.5);
-    final endNoteY =
-        coordinates.staffBaseline.dy -
-        (_calculateStaffPosition((endNoteEl.element as Note).pitch) *
-            coordinates.staffSpace *
-            0.5);
-    _drawTieCurve(
-      startNoteEl.position.dx,
-      startNoteY,
-      endNoteEl.position.dx,
-      endNoteY,
-      curveUp,
-    );
-  }
+      final controlPoint = Offset(
+        (startPoint.dx + endPoint.dx) / 2,
+        ((startPoint.dy + endPoint.dy) / 2) +
+            (curvatureHeight * (tieAbove ? -1 : 1)),
+      );
 
-  void _drawTieCurve(
-    double startX,
-    double startY,
-    double endX,
-    double endY,
-    bool curveUp,
-  ) {
-    final noteheadWidth =
-        (metadata.getGlyphBBox('noteheadBlack')?['bBoxNE']?[0] ?? 1.18) *
-        coordinates.staffSpace;
-    final startPoint = Offset(startX + noteheadWidth / 2, startY);
-    final endPoint = Offset(endX - noteheadWidth / 2, endY);
+      // CORREÇÃO: Ligadura preenchida (não apenas traço), formato de arco
+      final tiePaint = Paint()
+        ..color = theme.tieColor ?? theme.noteheadColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = coordinates.staffSpace * 0.13
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
 
-    final direction = curveUp ? -1.0 : 1.0;
-    final arcHeight =
-        (coordinates.staffSpace * 0.8) + (endPoint.dx - startPoint.dx) * 0.04;
-
-    final controlPoint1 = Offset(
-      startPoint.dx + (endPoint.dx - startPoint.dx) * 0.25,
-      startPoint.dy + (arcHeight * direction),
-    );
-    final controlPoint2 = Offset(
-      endPoint.dx - (endPoint.dx - startPoint.dx) * 0.25,
-      endPoint.dy + (arcHeight * direction),
-    );
-
-    final tiePaint = Paint()
-      ..color = theme.tieColor ?? theme.noteheadColor
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(startPoint.dx, startPoint.dy)
-      ..cubicTo(
-        controlPoint1.dx,
-        controlPoint1.dy,
-        controlPoint2.dx,
-        controlPoint2.dy,
+      final path = Path();
+      path.moveTo(startPoint.dx, startPoint.dy);
+      path.quadraticBezierTo(
+        controlPoint.dx,
+        controlPoint.dy,
         endPoint.dx,
         endPoint.dy,
-      )
-      ..cubicTo(
-        controlPoint2.dx,
-        controlPoint2.dy - (direction * staffLineThickness * 1.5),
-        controlPoint1.dx,
-        controlPoint1.dy - (direction * staffLineThickness * 1.5),
-        startPoint.dx,
-        startPoint.dy,
       );
-
-    canvas.drawPath(path, tiePaint);
-  }
-
-  // ################# SLUR RENDERING #################
-
-  void renderSlurs() {
-    // A lógica de Slur está em `slur_calculator.dart` e pode ser chamada aqui.
-    // Por simplicidade, vamos usar uma versão básica de desenho.
-    final slurGroups = _identifySlurGroups();
-    for (final group in slurGroups.values) {
-      if (group.length < 2) continue;
-
-      final startElement = elements[group.first];
-      final endElement = elements[group.last];
-
-      if (startElement.element is! Note || endElement.element is! Note)
-        continue;
-      _renderSingleSlur(startElement, endElement);
+      canvas.drawPath(path, tiePaint);
     }
   }
 
-  Map<int, List<int>> _identifySlurGroups() {
+  Map<int, List<int>> _identifySlurGroups(List<PositionedElement> elements) {
     final groups = <int, List<int>>{};
     int groupId = 0;
     for (int i = 0; i < elements.length; i++) {
@@ -379,65 +360,86 @@ class GroupRenderer {
             if (nextElement.slur == SlurType.end) break;
           }
         }
-        if (group.length > 1) groups[groupId++] = group;
+        if (group.length >= 2) {
+          groups[groupId++] = group;
+        }
       }
     }
     return groups;
   }
 
-  void _renderSingleSlur(
-    PositionedElement startElement,
-    PositionedElement endElement,
+  void renderSlurs(
+    Canvas canvas,
+    List<PositionedElement> elements,
+    Clef currentClef,
   ) {
-    final startNote = startElement.element as Note;
-    final startStaffPos = _calculateStaffPosition(startNote.pitch);
-    final startStemUp = startStaffPos <= 0;
-    final slurAbove = !startStemUp;
+    final slurGroups = _identifySlurGroups(elements);
+    for (final group in slurGroups.values) {
+      if (group.length < 2) continue;
 
-    final startNoteY =
-        coordinates.staffBaseline.dy -
-        (startStaffPos * coordinates.staffSpace * 0.5);
-    final endNoteY =
-        coordinates.staffBaseline.dy -
-        (_calculateStaffPosition((endElement.element as Note).pitch) *
-            coordinates.staffSpace *
-            0.5);
+      final startElement = elements[group.first];
+      final endElement = elements[group.last];
+      if (startElement.element is! Note || endElement.element is! Note) {
+        continue;
+      }
+      final startNote = startElement.element as Note;
+      final endNote = endElement.element as Note;
+      final startStaffPos = _calculateStaffPosition(
+        startNote.pitch,
+        currentClef,
+      );
+      final endStaffPos = _calculateStaffPosition(endNote.pitch, currentClef);
 
-    final noteheadWidth =
-        (metadata.getGlyphBBox('noteheadBlack')?['bBoxNE']?[0] ?? 1.18) *
-        coordinates.staffSpace;
+      // CORREÇÃO LACERDA: Ligadura de expressão segue mesma regra de tie
+      // Oposta à direção das hastes
+      final startStemUp = startStaffPos <= 0;
+      final slurAbove = !startStemUp;
 
-    final startPoint = Offset(
-      startElement.position.dx - noteheadWidth / 2,
-      startNoteY,
-    );
-    final endPoint = Offset(
-      endElement.position.dx + noteheadWidth / 2,
-      endNoteY,
-    );
+      final startNoteY =
+          coordinates.staffBaseline.dy -
+          (startStaffPos * coordinates.staffSpace * 0.5);
+      final endNoteY =
+          coordinates.staffBaseline.dy -
+          (endStaffPos * coordinates.staffSpace * 0.5);
 
-    final direction = slurAbove ? -1.0 : 1.0;
-    final arcHeight =
-        (coordinates.staffSpace * 1.5) +
-        (endPoint.dx - startPoint.dx).abs() * 0.1;
+      final noteWidth = coordinates.staffSpace * 1.18;
 
-    final controlPoint1 = Offset(
-      startPoint.dx + (endPoint.dx - startPoint.dx) * 0.2,
-      startPoint.dy + (arcHeight * direction),
-    );
-    final controlPoint2 = Offset(
-      endPoint.dx - (endPoint.dx - startPoint.dx) * 0.2,
-      endPoint.dy + (arcHeight * direction),
-    );
+      // CORREÇÃO: Ligadura mais próxima das cabeças
+      final startPoint = Offset(
+        startElement.position.dx + noteWidth * 0.3,
+        startNoteY + (coordinates.staffSpace * 0.4 * (slurAbove ? -1 : 1)),
+      );
+      final endPoint = Offset(
+        endElement.position.dx + noteWidth * 0.7,
+        endNoteY + (coordinates.staffSpace * 0.4 * (slurAbove ? -1 : 1)),
+      );
 
-    final slurPaint = Paint()
-      ..color = theme.slurColor ?? theme.noteheadColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = staffLineThickness * 1.5;
+      // CORREÇÃO LACERDA: Altura do arco proporcional à distância
+      // Quanto mais longa, mais alta a curva
+      final distance = (endPoint.dx - startPoint.dx).abs();
+      final arcHeight = coordinates.staffSpace * 1.2 + (distance * 0.04);
 
-    final path = Path()
-      ..moveTo(startPoint.dx, startPoint.dy)
-      ..cubicTo(
+      // Curva bezier cúbica para forma mais natural
+      final controlPoint1 = Offset(
+        startPoint.dx + (endPoint.dx - startPoint.dx) * 0.3,
+        startPoint.dy + (arcHeight * (slurAbove ? -1 : 1)),
+      );
+      final controlPoint2 = Offset(
+        endPoint.dx - (endPoint.dx - startPoint.dx) * 0.3,
+        endPoint.dy + (arcHeight * (slurAbove ? -1 : 1)),
+      );
+
+      // CORREÇÃO: Espessura padrão de ligadura de expressão
+      final slurPaint = Paint()
+        ..color = theme.slurColor ?? theme.noteheadColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = coordinates.staffSpace * 0.12
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      final path = Path();
+      path.moveTo(startPoint.dx, startPoint.dy);
+      path.cubicTo(
         controlPoint1.dx,
         controlPoint1.dy,
         controlPoint2.dx,
@@ -445,14 +447,11 @@ class GroupRenderer {
         endPoint.dx,
         endPoint.dy,
       );
-
-    canvas.drawPath(path, slurPaint);
+      canvas.drawPath(path, slurPaint);
+    }
   }
 
-  // ################# HELPERS #################
-
-  int _calculateStaffPosition(Pitch pitch) {
-    if (currentClef == null) return 0;
+  int _calculateStaffPosition(Pitch pitch, Clef clef) {
     const stepToDiatonic = {
       'C': 0,
       'D': 1,
@@ -463,18 +462,17 @@ class GroupRenderer {
       'B': 6,
     };
     final pitchStep = stepToDiatonic[pitch.step] ?? 0;
-
     int baseStep, baseOctave, basePosition;
-    switch (currentClef!.actualClefType) {
+    switch (clef.actualClefType) {
       case ClefType.treble:
-        baseStep = 4;
+        baseStep = 6;
         baseOctave = 4;
-        basePosition = 2;
+        basePosition = 0;
         break;
       case ClefType.bass:
-        baseStep = 3;
+        baseStep = 1;
         baseOctave = 3;
-        basePosition = -2;
+        basePosition = 0;
         break;
       case ClefType.alto:
         baseStep = 0;
@@ -482,16 +480,16 @@ class GroupRenderer {
         basePosition = 0;
         break;
       case ClefType.tenor:
-        baseStep = 0;
-        baseOctave = 4;
-        basePosition = -2;
+        baseStep = 5;
+        baseOctave = 3;
+        basePosition = 0;
         break;
       default:
         return 0;
     }
     int diatonicDistance =
         (pitchStep - baseStep) +
-        ((pitch.octave + currentClef!.octaveShift - baseOctave) * 7);
-    return basePosition + diatonicDistance;
+        ((pitch.octave + clef.octaveShift - baseOctave) * 7);
+    return basePosition - diatonicDistance;
   }
 }

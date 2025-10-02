@@ -7,14 +7,12 @@ import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
 
 class ArticulationRenderer {
-  final Canvas canvas;
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
 
   ArticulationRenderer({
-    required this.canvas,
     required this.coordinates,
     required this.metadata,
     required this.theme,
@@ -22,6 +20,7 @@ class ArticulationRenderer {
   });
 
   void render(
+    Canvas canvas,
     List<ArticulationType> articulations,
     Offset notePos,
     int staffPosition,
@@ -38,6 +37,7 @@ class ArticulationRenderer {
       final glyphName = _getArticulationGlyph(articulation, articulationAbove);
       if (glyphName != null) {
         _drawGlyph(
+          canvas,
           glyphName: glyphName,
           position: Offset(notePos.dx, notePos.dy + yOffset),
           size: glyphSize * 0.8,
@@ -66,7 +66,8 @@ class ArticulationRenderer {
     };
   }
 
-  void _drawGlyph({
+  void _drawGlyph(
+    Canvas canvas, {
     required String glyphName,
     required Offset position,
     required double size,

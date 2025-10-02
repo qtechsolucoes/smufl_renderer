@@ -1,16 +1,13 @@
 // lib/src/rendering/renderers/rest_renderer.dart
 
 import 'package:flutter/material.dart';
-
 import '../../music_model/musical_element.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
 import 'ornament_renderer.dart';
 
-/// Renderizador especialista para desenhar Pausas.
 class RestRenderer {
-  final Canvas canvas;
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
@@ -18,7 +15,6 @@ class RestRenderer {
   final OrnamentRenderer ornamentRenderer;
 
   RestRenderer({
-    required this.canvas,
     required this.coordinates,
     required this.metadata,
     required this.theme,
@@ -26,64 +22,95 @@ class RestRenderer {
     required this.ornamentRenderer,
   });
 
-  void render(Rest rest, Offset position) {
+  void render(Canvas canvas, Rest rest, Offset position) {
     String glyphName;
-    double yOffset = 0;
+    // CORREÇÃO: Usar staffPosition relativo ao centro da pauta
+    // staffPosition 0 = linha do meio (linha 3)
+    // Positive = acima, Negative = abaixo
+    int staffPosition;
 
     switch (rest.duration.type) {
       case DurationType.whole:
         glyphName = 'restWhole';
-        yOffset = -coordinates.staffSpace; // Pendurada na 4ª linha
+        // CORREÇÃO MUSICOLÓGICA SMuFL: Pausa de semibreve fica ABAIXO da 4ª linha
+        // Posição -2 = um espaço abaixo da linha do meio
+        staffPosition = -2;
         break;
       case DurationType.half:
         glyphName = 'restHalf';
-        yOffset = 0; // Sobre a 3ª linha
+        // CORREÇÃO MUSICOLÓGICA SMuFL: Pausa de mínima fica ACIMA da 3ª linha
+        // Posição 2 = um espaço acima da linha do meio
+        staffPosition = 2;
         break;
       case DurationType.quarter:
         glyphName = 'restQuarter';
+        // Pausa de semínima centrada
+        staffPosition = 0;
         break;
       case DurationType.eighth:
         glyphName = 'rest8th';
+        // Pausas menores centradas
+        staffPosition = 0;
         break;
       case DurationType.sixteenth:
         glyphName = 'rest16th';
+        staffPosition = 0;
         break;
       case DurationType.thirtySecond:
         glyphName = 'rest32nd';
+        staffPosition = 0;
         break;
       case DurationType.sixtyFourth:
         glyphName = 'rest64th';
+        staffPosition = 0;
         break;
       default:
         glyphName = 'restQuarter';
+        staffPosition = 0;
     }
 
-    final restPosition = Offset(
-      position.dx,
-      coordinates.staffBaseline.dy + yOffset,
-    );
+    // Calcular Y baseado no staff position (mesmo método usado para notas)
+    final restY =
+        coordinates.staffBaseline.dy -
+        (staffPosition * coordinates.staffSpace * 0.5);
+
+    final restPosition = Offset(position.dx, restY);
+
+    // CORREÇÃO DEFINITIVA SMuFL: Usar apenas bounding box center, SEM centerVertically
+    // O TextPainter.height não corresponde ao SMuFL bounding box
+    final glyphInfo = metadata.getGlyphInfo(glyphName);
+    double verticalAdjustment = 0;
+
+    if (glyphInfo != null && glyphInfo.hasBoundingBox) {
+      // Usar centro do bounding box SMuFL para alinhamento preciso
+      final bbox = glyphInfo.boundingBox!;
+      // bbox.centerY está em staff spaces, converter para pixels
+      verticalAdjustment = -(bbox.centerY * coordinates.staffSpace);
+    }
 
     _drawGlyph(
+      canvas,
       glyphName: glyphName,
-      position: restPosition,
+      position: Offset(restPosition.dx, restPosition.dy + verticalAdjustment),
       size: glyphSize,
       color: theme.restColor,
-      centerVertically: true,
+      centerVertically: false, // NUNCA usar centerVertically para SMuFL glyphs
+      centerHorizontally: true, // Manter centralização horizontal
     );
 
-    // Renderiza ornamentos na pausa (ex: fermata)
     if (rest.ornaments.isNotEmpty) {
-      // Cria uma "nota fantasma" para passar para o ornamentRenderer
       final placeholderNote = Note(
         pitch: Pitch(step: 'B', octave: 4), // Posição central da pauta
         duration: rest.duration,
         ornaments: rest.ornaments,
       );
-      ornamentRenderer.renderForNote(placeholderNote, restPosition, 0);
+      // CORREÇÃO: Passando o 'canvas' como primeiro argumento.
+      ornamentRenderer.renderForNote(canvas, placeholderNote, restPosition, 0);
     }
   }
 
-  void _drawGlyph({
+  void _drawGlyph(
+    Canvas canvas, {
     required String glyphName,
     required Offset position,
     required double size,

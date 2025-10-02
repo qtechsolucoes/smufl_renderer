@@ -1,75 +1,89 @@
 // lib/src/rendering/renderers/symbol_and_text_renderer.dart
 
 import 'package:flutter/material.dart';
-
 import '../../music_model/musical_element.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
 
-/// Renderizador especialista para elementos de notação baseados em símbolos e texto,
-/// como dinâmicas, marcas de tempo, repetições, etc.
 class SymbolAndTextRenderer {
-  final Canvas canvas;
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
 
   SymbolAndTextRenderer({
-    required this.canvas,
     required this.coordinates,
     required this.metadata,
     required this.theme,
     required this.glyphSize,
   });
 
-  void renderRepeatMark(RepeatMark repeatMark, Offset basePosition) {
+  void renderRepeatMark(
+    Canvas canvas,
+    RepeatMark repeatMark,
+    Offset basePosition,
+  ) {
     final glyphName = _getRepeatMarkGlyph(repeatMark.type);
     if (glyphName == null) return;
 
-    final signY = coordinates.staffBaseline.dy - (coordinates.staffSpace * 4.0);
+    // CORREÇÃO SMuFL: Usar opticalCenter do metadata ao invés de valor hardcoded
+    // Posição tipográfica: acima da pauta (linha 5 + espaço adicional)
+    final signY = coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5);
+
+    // CORREÇÃO SMuFL: Usar opticalCenter anchor se disponível
+    final glyphInfo = metadata.getGlyphInfo(glyphName);
+    double verticalAdjust = 0;
+    if (glyphInfo != null && glyphInfo.hasAnchors) {
+      final opticalCenter = glyphInfo.anchors?.getAnchor('opticalCenter');
+      if (opticalCenter != null) {
+        verticalAdjust = opticalCenter.dy * coordinates.staffSpace;
+      }
+    }
 
     _drawGlyph(
+      canvas,
       glyphName: glyphName,
-      position: Offset(basePosition.dx, signY),
+      position: Offset(basePosition.dx, signY - verticalAdjust),
       size: glyphSize * 1.1,
       color: theme.repeatColor ?? theme.noteheadColor,
-      centerVertically: true,
+      centerVertically: glyphInfo == null,
       centerHorizontally: true,
     );
   }
 
   String? _getRepeatMarkGlyph(RepeatType type) {
-    const repeatGlyphs = {
-      RepeatType.segno: 'segno',
-      RepeatType.coda: 'coda',
-      // Adicione outros glifos de repetição aqui
-    };
+    const repeatGlyphs = {RepeatType.segno: 'segno', RepeatType.coda: 'coda'};
     return repeatGlyphs[type];
   }
 
-  void renderDynamic(Dynamic dynamic, Offset basePosition) {
+  void renderDynamic(Canvas canvas, Dynamic dynamic, Offset basePosition, {double verticalOffset = 0.0}) {
     if (dynamic.isHairpin) {
-      _renderHairpin(dynamic, basePosition);
+      _renderHairpin(canvas, dynamic, basePosition, verticalOffset: verticalOffset);
       return;
     }
 
     final glyphName = _getDynamicGlyph(dynamic.type);
+    // CORREÇÃO TIPOGRÁFICA SMuFL: Dinâmicas devem ficar 2.5 staff spaces abaixo da última linha
+    // CORREÇÃO LACERDA: Adicionar verticalOffset para evitar sobreposição
     final dynamicY =
-        coordinates.staffBaseline.dy + (coordinates.staffSpace * 3.0);
+        coordinates.getStaffLineY(1) + (coordinates.staffSpace * 2.5) + verticalOffset;
 
     if (glyphName != null) {
+      // CORREÇÃO SMuFL: Escala de dinâmicas não deveria ser hardcoded (0.9)
+      // Usar tamanho base e deixar a fonte SMuFL definir proporções
       _drawGlyph(
+        canvas,
         glyphName: glyphName,
         position: Offset(basePosition.dx, dynamicY),
-        size: glyphSize * 0.9,
+        size: glyphSize, // Remover escala arbitrária de 0.9
         color: theme.dynamicColor ?? theme.noteheadColor,
         centerVertically: true,
         centerHorizontally: true,
       );
     } else if (dynamic.customText != null) {
       _drawText(
+        canvas,
         text: dynamic.customText!,
         position: Offset(basePosition.dx, dynamicY),
         style:
@@ -83,15 +97,20 @@ class SymbolAndTextRenderer {
     }
   }
 
-  void _renderHairpin(Dynamic dynamic, Offset basePosition) {
+  void _renderHairpin(Canvas canvas, Dynamic dynamic, Offset basePosition, {double verticalOffset = 0.0}) {
     final length = dynamic.length ?? coordinates.staffSpace * 4;
+    // CORREÇÃO: Usar mesma posição Y que dinâmicas
+    // CORREÇÃO LACERDA: Adicionar verticalOffset para evitar sobreposição
     final hairpinY =
-        coordinates.staffBaseline.dy + (coordinates.staffSpace * 3.0);
-    final height = coordinates.staffSpace * 0.5;
+        coordinates.getStaffLineY(1) + (coordinates.staffSpace * 2.5) + verticalOffset;
+    // CORREÇÃO TIPOGRÁFICA SMuFL: Altura recomendada de 0.75-1.0 staff spaces
+    final height = coordinates.staffSpace * 0.75;
 
+    // CORREÇÃO CRÍTICA SMuFL: Usar hairpinThickness ao invés de thinBarlineThickness
+    final hairpinThickness = metadata.getEngravingDefault('hairpinThickness');
     final paint = Paint()
       ..color = theme.dynamicColor ?? theme.noteheadColor
-      ..strokeWidth = metadata.getEngravingDefault('thinBarlineThickness');
+      ..strokeWidth = hairpinThickness * coordinates.staffSpace;
 
     if (dynamic.type == DynamicType.crescendo) {
       canvas.drawLine(
@@ -127,12 +146,11 @@ class SymbolAndTextRenderer {
       DynamicType.pp: 'dynamicPP',
       DynamicType.ff: 'dynamicFF',
       DynamicType.sforzando: 'dynamicSforzando1',
-      // Adicione outros
     };
     return dynamicGlyphs[type];
   }
 
-  void renderMusicText(MusicText text, Offset basePosition) {
+  void renderMusicText(Canvas canvas, MusicText text, Offset basePosition) {
     double yOffset = 0;
     switch (text.placement) {
       case TextPlacement.above:
@@ -146,6 +164,7 @@ class SymbolAndTextRenderer {
         break;
     }
     _drawText(
+      canvas,
       text: text.text,
       position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
       style: text.type == TextType.tempo
@@ -154,12 +173,13 @@ class SymbolAndTextRenderer {
     );
   }
 
-  void renderTempoMark(TempoMark tempo, Offset basePosition) {
+  void renderTempoMark(Canvas canvas, TempoMark tempo, Offset basePosition) {
     String text = tempo.text ?? '';
     if (tempo.bpm != null) {
       text += ' (♩ = ${tempo.bpm})';
     }
     _drawText(
+      canvas,
       text: text,
       position: Offset(
         basePosition.dx,
@@ -170,11 +190,17 @@ class SymbolAndTextRenderer {
     );
   }
 
-  void renderBreath(Breath breath, Offset basePosition) {
-    final glyphName = 'breathMarkComma'; // Simplificado
+  void renderBreath(Canvas canvas, Breath breath, Offset basePosition) {
+    final glyphName = 'breathMarkComma';
+    // CORREÇÃO MUSICOLÓGICA: Respiração deve ficar ACIMA da pauta, não na 4ª linha
+    // Posição correta: acima da 5ª linha (linha superior)
     _drawGlyph(
+      canvas,
       glyphName: glyphName,
-      position: Offset(basePosition.dx, coordinates.getStaffLineY(4)),
+      position: Offset(
+        basePosition.dx,
+        coordinates.getStaffLineY(5) - (coordinates.staffSpace * 0.5),
+      ),
       size: glyphSize * 0.7,
       color: theme.breathColor ?? theme.noteheadColor,
       centerHorizontally: true,
@@ -182,10 +208,13 @@ class SymbolAndTextRenderer {
     );
   }
 
-  void renderCaesura(Caesura caesura, Offset basePosition) {
+  void renderCaesura(Canvas canvas, Caesura caesura, Offset basePosition) {
+    // CORREÇÃO MUSICOLÓGICA: Cesura deve atravessar toda a pauta
+    // Usar linha central (3ª linha/baseline) como referência, não a 5ª linha
     _drawGlyph(
+      canvas,
       glyphName: caesura.glyphName,
-      position: Offset(basePosition.dx, coordinates.getStaffLineY(5)),
+      position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
       size: glyphSize,
       color: theme.caesuraColor ?? theme.noteheadColor,
       centerHorizontally: true,
@@ -193,14 +222,23 @@ class SymbolAndTextRenderer {
     );
   }
 
-  void renderOctaveMark(OctaveMark octaveMark, Offset basePosition) {
-    // A lógica completa para linhas tracejadas de oitava é complexa e
-    // se encaixaria melhor no GroupRenderer. Por enquanto, desenhamos o símbolo.
+  void renderOctaveMark(
+    Canvas canvas,
+    OctaveMark octaveMark,
+    Offset basePosition,
+  ) {
+    // CORREÇÃO: Considerar se é 8va (acima) ou 8vb (abaixo)
+    final isAbove = octaveMark.type == OctaveType.octave8va;
+    final yPosition = isAbove
+        ? coordinates.getStaffLineY(5) - (coordinates.staffSpace * 1.5) // Acima da pauta
+        : coordinates.getStaffLineY(1) + (coordinates.staffSpace * 1.5); // Abaixo da pauta
+
     _drawText(
+      canvas,
       text: octaveMark.type == OctaveType.octave8va ? '8va' : '8vb',
       position: Offset(
         basePosition.dx,
-        coordinates.staffBaseline.dy - (coordinates.staffSpace * 3.5),
+        yPosition,
       ),
       style:
           theme.octaveTextStyle ??
@@ -211,8 +249,8 @@ class SymbolAndTextRenderer {
     );
   }
 
-  // Métodos auxiliares
-  void _drawText({
+  void _drawText(
+    Canvas canvas, {
     required String text,
     required Offset position,
     required TextStyle style,
@@ -232,7 +270,8 @@ class SymbolAndTextRenderer {
     );
   }
 
-  void _drawGlyph({
+  void _drawGlyph(
+    Canvas canvas, {
     required String glyphName,
     required Offset position,
     required double size,

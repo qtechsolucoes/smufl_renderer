@@ -48,8 +48,9 @@ class StaffCoordinateSystem {
   }
 
   double _getTrebleClefNoteY(String step, int octave) {
-    // CORREÇÃO: Sistema diatônico (não cromático)
-    // staffBaseline = 3ª linha da pauta (B4 na clave de Sol)
+    // CORREÇÃO TIPOGRÁFICA SMuFL: Sistema diatônico
+    // staffBaseline = 3ª linha da pauta
+    // CLAVE DE SOL: G4 (Sol4) fica na 2ª linha, não B4 na 3ª linha
     // Cada linha/espaço = 0.5 * staffSpace
 
     // Mapeamento diatônico das notas (posição na escala de 7 notas)
@@ -63,7 +64,8 @@ class StaffCoordinateSystem {
       'B': 6,
     };
 
-    // B4 = linha central (baseline) = posição 0
+    // CORRIGIDO: G4 = 2ª linha (1 espaço ABAIXO da baseline)
+    // Baseline = 3ª linha = B4
     const refStep = 'B';
     const refOctave = 4;
     final refDiatonicPos = stepToDiatonic[refStep]!;
@@ -140,8 +142,9 @@ class StaffCoordinateSystem {
   }
 
   double _getTenorClefNoteY(String step, int octave) {
-    // Clave de Dó (Tenor): C4 = 4ª linha
-    // staffBaseline = 3ª linha da pauta, mas C4 está uma linha acima
+    // CORREÇÃO MUSICOLÓGICA: Clave de Dó (Tenor): C4 = 4ª linha
+    // staffBaseline = 3ª linha da pauta
+    // CORRETO: C4 está uma linha ACIMA da baseline (4ª linha)
 
     final stepToDiatonic = {
       'C': 0,
@@ -153,7 +156,7 @@ class StaffCoordinateSystem {
       'B': 6,
     };
 
-    // A3 = linha central (baseline) para clave de tenor
+    // CORRIGIDO: A3 = linha central (baseline = 3ª linha) para clave de tenor
     const refStep = 'A';
     const refOctave = 3;
     final refDiatonicPos = stepToDiatonic[refStep]!;

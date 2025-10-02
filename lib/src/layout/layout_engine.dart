@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../music_model/musical_element.dart';
+import '../smufl/smufl_metadata_loader.dart';
 import 'beam_grouper.dart';
 
 class PositionedElement {
@@ -87,28 +88,57 @@ class LayoutEngine {
   final Staff staff;
   final double availableWidth;
   final double staffSpace;
+  final SmuflMetadata? metadata;
 
-  // Larguras baseadas em metadados SMuFL oficiais
-  static const double gClefWidth = 2.684;
-  static const double fClefWidth = 2.756;
-  static const double cClefWidth = 2.796;
-  static const double noteheadBlackWidth = 1.18;
-  static const double accidentalSharpWidth = 1.116;
-  static const double accidentalFlatWidth = 1.18;
+  // CORREÇÃO SMuFL: Larguras agora consultadas dinamicamente do metadata
+  // Valores de fallback mantidos para compatibilidade
+  static const double _gClefWidthFallback = 2.684;
+  static const double _fClefWidthFallback = 2.756;
+  static const double _cClefWidthFallback = 2.796;
+  static const double _noteheadBlackWidthFallback = 1.18;
+  static const double _accidentalSharpWidthFallback = 1.116;
+  static const double _accidentalFlatWidthFallback = 1.18;
   static const double barlineSeparation = 0.4;
   static const double legerLineExtension = 0.4;
 
-  // CORREÇÃO #3: Espaçamentos melhorados
+  // CORREÇÃO TIPOGRÁFICA: Espaçamentos melhorados baseados em padrões musicais
   static const double systemMargin = 2.0;
   static const double measureMinWidth = 4.0;
-  static const double noteMinSpacing = 1.5;
+  static const double noteMinSpacing = 2.0; // CORRIGIDO: 1.5 era muito apertado
   static const double measureEndPadding = 1.0;
 
   LayoutEngine(
     this.staff, {
     required this.availableWidth,
     this.staffSpace = 12.0,
+    this.metadata,
   });
+
+  /// Obtém largura de glifo dinamicamente do metadata ou retorna fallback
+  double _getGlyphWidth(String glyphName, double fallback) {
+    if (metadata != null && metadata!.hasGlyph(glyphName)) {
+      return metadata!.getGlyphWidth(glyphName);
+    }
+    return fallback;
+  }
+
+  /// Largura da clave de Sol (G clef)
+  double get gClefWidth => _getGlyphWidth('gClef', _gClefWidthFallback);
+
+  /// Largura da clave de Fá (F clef)
+  double get fClefWidth => _getGlyphWidth('fClef', _fClefWidthFallback);
+
+  /// Largura da clave de Dó (C clef)
+  double get cClefWidth => _getGlyphWidth('cClef', _cClefWidthFallback);
+
+  /// Largura da cabeça de nota preta
+  double get noteheadBlackWidth => _getGlyphWidth('noteheadBlack', _noteheadBlackWidthFallback);
+
+  /// Largura do sustenido
+  double get accidentalSharpWidth => _getGlyphWidth('accidentalSharp', _accidentalSharpWidthFallback);
+
+  /// Largura do bemol
+  double get accidentalFlatWidth => _getGlyphWidth('accidentalFlat', _accidentalFlatWidthFallback);
 
   List<PositionedElement> layout() {
     final cursor = LayoutCursor(
@@ -230,16 +260,18 @@ class LayoutEngine {
         element is TimeSignature;
   }
 
-  // CORREÇÃO #3: Espaçamento inteligente corrigido
+  // CORREÇÃO TIPOGRÁFICA SMuFL: Espaçamento inteligente baseado em padrões
   double _calculateSpacingAfterSystemElementsCorrected(
     List<MusicalElement> systemElements,
     List<MusicalElement> musicalElements,
   ) {
-    double baseSpacing = staffSpace * 2.0; // Aumentado de 1.5 para 2.0
+    // CORRIGIDO: 2.0 ainda muito apertado após elementos de sistema
+    double baseSpacing = staffSpace * 2.5;
 
     bool hasClef = systemElements.any((e) => e is Clef);
     if (hasClef) {
-      baseSpacing = staffSpace * 2.5; // Espaço extra após clave
+      // CORRIGIDO: Mínimo de 3.0 staff spaces após clave
+      baseSpacing = staffSpace * 3.0;
     }
 
     for (final element in systemElements) {
@@ -309,10 +341,23 @@ class LayoutEngine {
     if (element is Note) {
       double width = noteheadBlackWidth * staffSpace;
       if (element.pitch.accidentalGlyph != null) {
-        final accWidth = element.pitch.accidentalGlyph!.contains('Sharp')
-            ? accidentalSharpWidth
-            : accidentalFlatWidth;
-        width += (accWidth + 0.5) * staffSpace; // Mais espaço para acidente
+        // CORREÇÃO SMuFL: Detecção mais robusta e uso de valores corretos
+        final glyphName = element.pitch.accidentalGlyph!;
+        double accWidth = accidentalSharpWidth; // Default
+
+        // Identificar tipo de acidente corretamente
+        if (glyphName.contains('Flat') || glyphName.contains('flat')) {
+          accWidth = accidentalFlatWidth;
+        } else if (glyphName.contains('Natural') || glyphName.contains('natural')) {
+          accWidth = 0.92; // Largura típica de natural
+        } else if (glyphName.contains('DoubleSharp')) {
+          accWidth = 1.0; // Largura de dobrado sustenido
+        } else if (glyphName.contains('DoubleFlat')) {
+          accWidth = 1.5; // Largura de dobrado bemol
+        }
+
+        // CORRIGIDO: Espaçamento recomendado SMuFL é 0.25-0.3 staff spaces
+        width += (accWidth + 0.3) * staffSpace;
       }
       return width;
     }
@@ -327,9 +372,19 @@ class LayoutEngine {
 
       for (final note in element.notes) {
         if (note.pitch.accidentalGlyph != null) {
-          final accWidth = note.pitch.accidentalGlyph!.contains('Sharp')
-              ? accidentalSharpWidth
-              : accidentalFlatWidth;
+          // CORREÇÃO: Usar mesma lógica robusta de detecção que Note
+          final glyphName = note.pitch.accidentalGlyph!;
+          double accWidth = accidentalSharpWidth;
+
+          if (glyphName.contains('Flat') || glyphName.contains('flat')) {
+            accWidth = accidentalFlatWidth;
+          } else if (glyphName.contains('Natural') || glyphName.contains('natural')) {
+            accWidth = 0.92;
+          } else if (glyphName.contains('DoubleSharp')) {
+            accWidth = 1.0;
+          } else if (glyphName.contains('DoubleFlat')) {
+            accWidth = 1.5;
+          }
           if (accWidth > maxAccidentalWidth) {
             maxAccidentalWidth = accWidth;
           }

@@ -7,24 +7,20 @@ import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
 
-/// Renderizador especialista em elementos de compasso como Claves,
-/// Armaduras de Clave e Fórmulas de Compasso.
 class BarElementRenderer {
-  final Canvas canvas;
   final StaffCoordinateSystem coordinates;
   final SmuflMetadata metadata;
   final MusicScoreTheme theme;
   final double glyphSize;
 
   BarElementRenderer({
-    required this.canvas,
     required this.coordinates,
     required this.metadata,
     required this.theme,
     required this.glyphSize,
   });
 
-  void renderClef(Clef clef, Offset basePosition) {
+  void renderClef(Canvas canvas, Clef clef, Offset basePosition) {
     final glyphName = clef.glyphName;
     double yOffset = 0;
 
@@ -54,6 +50,7 @@ class BarElementRenderer {
     }
 
     _drawGlyph(
+      canvas,
       glyphName: glyphName,
       position: Offset(basePosition.dx, coordinates.staffBaseline.dy + yOffset),
       size: glyphSize,
@@ -61,47 +58,12 @@ class BarElementRenderer {
       centerVertically: true,
     );
 
-    if (clef.octaveShift != 0) {
-      _drawOctaveIndication(clef, basePosition);
-    }
-  }
-
-  void _drawOctaveIndication(Clef clef, Offset position) {
-    String octaveText = '';
-    double yOffset = 0.0;
-
-    switch (clef.octaveShift.abs()) {
-      case 1:
-        octaveText = '8';
-        break;
-      case 2:
-        octaveText = '15';
-        break;
-    }
-
-    if (octaveText.isNotEmpty) {
-      yOffset = clef.octaveShift > 0
-          ? -coordinates.staffSpace * 3.5
-          : coordinates.staffSpace * 3.5;
-
-      final textStyle = TextStyle(
-        fontSize: coordinates.staffSpace * 1.2,
-        color: theme.clefColor,
-        fontWeight: FontWeight.bold,
-      );
-
-      _drawText(
-        text: octaveText,
-        position: Offset(
-          position.dx + coordinates.staffSpace,
-          coordinates.staffBaseline.dy + yOffset,
-        ),
-        style: textStyle,
-      );
-    }
+    // CORREÇÃO: NÃO desenhar indicação de oitava manual
+    // Os glyphs SMuFL como 'gClef8va' já contêm o "8" embutido
   }
 
   void renderKeySignature(
+    Canvas canvas,
     KeySignature ks,
     Clef currentClef,
     Offset basePosition,
@@ -125,6 +87,7 @@ class BarElementRenderer {
           (staffPos * coordinates.staffSpace * 0.5);
 
       _drawGlyph(
+        canvas,
         glyphName: glyphName,
         position: Offset(currentX, y),
         size: glyphSize * 0.9,
@@ -167,11 +130,16 @@ class BarElementRenderer {
     }
   }
 
-  void renderTimeSignature(TimeSignature ts, Offset basePosition) {
+  void renderTimeSignature(
+    Canvas canvas,
+    TimeSignature ts,
+    Offset basePosition,
+  ) {
     if (ts.numerator == 4 &&
         ts.denominator == 4 &&
         metadata.hasGlyph('timeSigCommon')) {
       _drawGlyph(
+        canvas,
         glyphName: 'timeSigCommon',
         position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
         size: glyphSize,
@@ -184,6 +152,7 @@ class BarElementRenderer {
         ts.denominator == 2 &&
         metadata.hasGlyph('timeSigCutCommon')) {
       _drawGlyph(
+        canvas,
         glyphName: 'timeSigCutCommon',
         position: Offset(basePosition.dx, coordinates.staffBaseline.dy),
         size: glyphSize,
@@ -194,6 +163,7 @@ class BarElementRenderer {
     }
 
     _drawGlyph(
+      canvas,
       glyphName: 'timeSig${ts.numerator}',
       position: Offset(basePosition.dx, coordinates.getStaffLineY(4)),
       size: glyphSize,
@@ -201,6 +171,7 @@ class BarElementRenderer {
       centerVertically: true,
     );
     _drawGlyph(
+      canvas,
       glyphName: 'timeSig${ts.denominator}',
       position: Offset(basePosition.dx, coordinates.getStaffLineY(2)),
       size: glyphSize,
@@ -209,26 +180,8 @@ class BarElementRenderer {
     );
   }
 
-  void _drawText({
-    required String text,
-    required Offset position,
-    required TextStyle style,
-  }) {
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        position.dx - (textPainter.width * 0.5),
-        position.dy - (textPainter.height * 0.5),
-      ),
-    );
-  }
-
-  void _drawGlyph({
+  void _drawGlyph(
+    Canvas canvas, {
     required String glyphName,
     required Offset position,
     required double size,

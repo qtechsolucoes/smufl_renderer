@@ -1,6 +1,7 @@
 // lib/src/smufl/smufl_metadata_loader.dart
 
 import 'dart:convert';
+import 'package:flutter/material.dart' show Offset;
 import 'package:flutter/services.dart' show rootBundle;
 import 'smufl_coordinates.dart';
 
@@ -16,6 +17,12 @@ class SmuflMetadata {
   final Map<String, SmuflGlyphInfo> _glyphInfoCache = {};
   bool _isLoaded = false;
 
+  // CORREÇÃO: Cache de metadata carregados
+  Map<String, dynamic>? _glyphsWithAnchors;
+  Map<String, dynamic>? _glyphBBoxes;
+  Map<String, dynamic>? _glyphAdvanceWidths;
+  Map<String, dynamic>? _engravingDefaults;
+
   Future<void> load() async {
     if (_isLoaded) return;
 
@@ -28,6 +35,12 @@ class SmuflMetadata {
       'packages/smufl_renderer/assets/smufl/glyphnames.json',
     );
     _glyphnames = json.decode(glyphnamesString);
+
+    // NOVO: Carregar seções do metadata de forma estruturada
+    _glyphsWithAnchors = _metadata?['glyphsWithAnchors'] as Map<String, dynamic>?;
+    _glyphBBoxes = _metadata?['glyphBBoxes'] as Map<String, dynamic>?;
+    _glyphAdvanceWidths = _metadata?['glyphAdvanceWidths'] as Map<String, dynamic>?;
+    _engravingDefaults = _metadata?['engravingDefaults'] as Map<String, dynamic>?;
 
     _isLoaded = true;
   }
@@ -91,8 +104,8 @@ class SmuflMetadata {
 
     // Obtém bounding box se disponível
     GlyphBoundingBox? boundingBox;
-    if (_metadata != null && _metadata!['glyphBBoxes'] != null) {
-      final bboxData = _metadata!['glyphBBoxes'][glyphName] as Map<String, dynamic>?;
+    if (_glyphBBoxes != null && _glyphBBoxes![glyphName] != null) {
+      final bboxData = _glyphBBoxes![glyphName] as Map<String, dynamic>?;
       if (bboxData != null) {
         boundingBox = GlyphBoundingBox.fromMetadata(bboxData);
       }
@@ -100,8 +113,8 @@ class SmuflMetadata {
 
     // Obtém anchors se disponível
     GlyphAnchors? anchors;
-    if (_metadata != null && _metadata!['glyphsWithAnchors'] != null) {
-      final anchorsData = _metadata!['glyphsWithAnchors'][glyphName] as Map<String, dynamic>?;
+    if (_glyphsWithAnchors != null && _glyphsWithAnchors![glyphName] != null) {
+      final anchorsData = _glyphsWithAnchors![glyphName] as Map<String, dynamic>?;
       if (anchorsData != null) {
         anchors = GlyphAnchors.fromMetadata(anchorsData);
       }
@@ -120,6 +133,67 @@ class SmuflMetadata {
     return glyphInfo;
   }
 
+  /// NOVO: Obtém um anchor específico de um glyph
+  /// @param glyphName Nome do glyph SMuFL
+  /// @param anchorName Nome do anchor (ex: 'stemUpSE', 'stemDownNW')
+  /// @return Offset em staff spaces, ou null se não encontrado
+  Offset? getGlyphAnchor(String glyphName, String anchorName) {
+    if (!_isLoaded || _glyphsWithAnchors == null) return null;
+
+    final glyphData = _glyphsWithAnchors![glyphName] as Map<String, dynamic>?;
+    if (glyphData == null) return null;
+
+    final anchorData = glyphData[anchorName];
+    if (anchorData is List && anchorData.length >= 2) {
+      return Offset(
+        (anchorData[0] as num).toDouble(),
+        (anchorData[1] as num).toDouble(),
+      );
+    }
+
+    return null;
+  }
+
+  /// NOVO: Obtém advance width de um glyph em staff spaces
+  double? getGlyphAdvanceWidth(String glyphName) {
+    if (!_isLoaded || _glyphAdvanceWidths == null) return null;
+
+    final width = _glyphAdvanceWidths![glyphName];
+    if (width is num) {
+      return width.toDouble();
+    }
+
+    return null;
+  }
+
+  /// NOVO: Obtém um engraving default específico
+  /// @param key Nome do parâmetro (ex: 'stemThickness', 'beamThickness')
+  /// @return Valor em staff spaces
+  double? getEngravingDefaultValue(String key) {
+    if (!_isLoaded || _engravingDefaults == null) return null;
+
+    final value = _engravingDefaults![key];
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return null;
+  }
+
+  /// NOVO: Obtém todos os engraving defaults
+  Map<String, double> getAllEngravingDefaults() {
+    if (!_isLoaded || _engravingDefaults == null) return {};
+
+    final defaults = <String, double>{};
+    for (final entry in _engravingDefaults!.entries) {
+      if (entry.value is num) {
+        defaults[entry.key] = (entry.value as num).toDouble();
+      }
+    }
+
+    return defaults;
+  }
+
   /// Obtém bounding box de um glifo como objeto
   GlyphBoundingBox? getGlyphBoundingBox(String glyphName) {
     return getGlyphInfo(glyphName)?.boundingBox;
@@ -131,7 +205,13 @@ class SmuflMetadata {
   }
 
   /// Obtém largura de um glifo em unidades SMuFL
+  /// Usa advance width se disponível, senão usa bounding box width
   double getGlyphWidth(String glyphName) {
+    // Preferir advance width (mais preciso para espaçamento)
+    final advanceWidth = getGlyphAdvanceWidth(glyphName);
+    if (advanceWidth != null) return advanceWidth;
+
+    // Fallback para bounding box
     return getGlyphBoundingBox(glyphName)?.width ?? 0.0;
   }
 
