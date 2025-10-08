@@ -76,18 +76,7 @@ class GroupRenderer {
           final noteY =
               coordinates.staffBaseline.dy -
               (staffPos * coordinates.staffSpace * 0.5);
-
-          // CORREÇÃO SMuFL: Aplicar ajuste vertical do bounding box
-          final noteheadGlyph = note.duration.type.glyphName;
-          final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
-          double noteheadVerticalAdjust = 0;
-
-          if (noteheadInfo != null && noteheadInfo.hasBoundingBox) {
-            final bbox = noteheadInfo.boundingBox!;
-            noteheadVerticalAdjust = -(bbox.centerY * coordinates.staffSpace);
-          }
-
-          positions.add(Offset(element.position.dx, noteY + noteheadVerticalAdjust));
+          positions.add(Offset(element.position.dx, noteY));
           staffPositions.add(staffPos);
           durations.add(note.duration.type);
         }
