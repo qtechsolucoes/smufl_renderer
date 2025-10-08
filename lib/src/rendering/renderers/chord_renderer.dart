@@ -89,13 +89,26 @@ class ChordRenderer {
         );
       }
 
+      // CORREÇÃO SMuFL: Usar bounding box para centralização precisa
+      final noteheadGlyph = note.duration.type.glyphName;
+      final noteheadInfo = metadata.getGlyphInfo(noteheadGlyph);
+      double noteheadVerticalAdjust = 0;
+
+      if (noteheadInfo != null && noteheadInfo.hasBoundingBox) {
+        final bbox = noteheadInfo.boundingBox!;
+        noteheadVerticalAdjust = -(bbox.centerY * coordinates.staffSpace);
+      }
+
       _drawGlyph(
         canvas,
-        glyphName: note.duration.type.glyphName,
-        position: Offset(basePosition.dx + xOffset, noteY),
+        glyphName: noteheadGlyph,
+        position: Offset(
+          basePosition.dx + xOffset,
+          noteY + noteheadVerticalAdjust,
+        ),
         size: glyphSize,
         color: theme.noteheadColor,
-        centerVertically: true,
+        centerVertically: false, // Usar apenas bounding box SMuFL
         centerHorizontally: true,
       );
     }
@@ -112,11 +125,25 @@ class ChordRenderer {
       final extremeNoteIndex = sortedNotes.indexOf(extremeNote);
       final stemXOffset = xOffsets[extremeNoteIndex]!;
 
+      // CORREÇÃO SMuFL: Calcular ajuste vertical da cabeça extrema para haste
+      final extremeNoteheadGlyph = extremeNote.duration.type.glyphName;
+      final extremeNoteheadInfo = metadata.getGlyphInfo(extremeNoteheadGlyph);
+      double extremeNoteheadVerticalAdjust = 0;
+
+      if (extremeNoteheadInfo != null && extremeNoteheadInfo.hasBoundingBox) {
+        final bbox = extremeNoteheadInfo.boundingBox!;
+        extremeNoteheadVerticalAdjust = -(bbox.centerY * coordinates.staffSpace);
+      }
+
       double stemFactor = 3.5 + (sortedNotes.length - 1) * 0.5;
 
       noteRenderer.renderStemAndFlag(
         canvas,
-        Offset(basePosition.dx + stemXOffset, extremeY),
+        // CORREÇÃO: Passar a posição DA CABEÇA renderizada (com ajuste SMuFL)
+        Offset(
+          basePosition.dx + stemXOffset,
+          extremeY + extremeNoteheadVerticalAdjust,
+        ),
         extremePos,
         chord.duration.type,
         customStemFactor: stemFactor,

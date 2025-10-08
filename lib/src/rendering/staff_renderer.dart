@@ -1,4 +1,5 @@
 // lib/src/rendering/staff_renderer.dart
+// VERSÃO CORRIGIDA COM TIPOGRAFIA PROFISSIONAL
 
 import 'package:flutter/material.dart';
 import '../layout/layout_engine.dart';
@@ -48,10 +49,15 @@ class StaffRenderer {
     required this.metadata,
     required this.theme,
   }) {
+    // CORREÇÃO TIPOGRÁFICA: Tamanho correto do glifo baseado em SMuFL
     glyphSize = coordinates.staffSpace * 4.0;
+
+    // CORREÇÃO: Usar valores corretos do metadata Bravura
     staffLineThickness =
-        metadata.getEngravingDefault('staffLineThickness') * 2.5;
-    stemThickness = metadata.getEngravingDefault('stemThickness') * 2.5;
+        metadata.getEngravingDefault('staffLineThickness') *
+        coordinates.staffSpace;
+    stemThickness =
+        metadata.getEngravingDefault('stemThickness') * coordinates.staffSpace;
 
     // Initialize SMuFL positioning engine with already loaded metadata
     positioningEngine = SMuFLPositioningEngine(metadataLoader: metadata);
@@ -66,23 +72,27 @@ class StaffRenderer {
       glyphSize: glyphSize,
       staffLineThickness: staffLineThickness,
     );
+
     articulationRenderer = ArticulationRenderer(
       coordinates: coordinates,
       metadata: metadata,
       theme: theme,
       glyphSize: glyphSize,
     );
+
     barElementRenderer = BarElementRenderer(
       coordinates: coordinates,
       metadata: metadata,
       theme: theme,
       glyphSize: glyphSize,
     );
+
     barlineRenderer = BarlineRenderer(
       coordinates: coordinates,
       metadata: metadata,
       theme: theme,
     );
+
     noteRenderer = NoteRenderer(
       coordinates: coordinates,
       metadata: metadata,
@@ -94,6 +104,7 @@ class StaffRenderer {
       ornamentRenderer: ornamentRenderer,
       positioningEngine: positioningEngine,
     );
+
     chordRenderer = ChordRenderer(
       coordinates: coordinates,
       metadata: metadata,
@@ -103,6 +114,7 @@ class StaffRenderer {
       stemThickness: stemThickness,
       noteRenderer: noteRenderer,
     );
+
     restRenderer = RestRenderer(
       coordinates: coordinates,
       metadata: metadata,
@@ -110,12 +122,14 @@ class StaffRenderer {
       glyphSize: glyphSize,
       ornamentRenderer: ornamentRenderer,
     );
+
     symbolAndTextRenderer = SymbolAndTextRenderer(
       coordinates: coordinates,
       metadata: metadata,
       theme: theme,
       glyphSize: glyphSize,
     );
+
     groupRenderer = GroupRenderer(
       coordinates: coordinates,
       metadata: metadata,
@@ -137,15 +151,14 @@ class StaffRenderer {
 
   void renderStaff(Canvas canvas, List<PositionedElement> elements, Size size) {
     _drawStaffLines(canvas, size.width);
-    currentClef = null;
+    currentClef = Clef(clefType: ClefType.treble); // Default clef
 
-    // First pass: Render all individual elements. This is crucial as it sets the
-    // `currentClef` that group renderers will need.
+    // Primeira passagem: renderizar elementos individuais
     for (final positioned in elements) {
       _renderElement(canvas, positioned);
     }
 
-    // Second pass: Render grouping elements, exactly as in the original file.
+    // Segunda passagem: renderizar elementos de grupo (beams, ties, slurs)
     if (currentClef != null) {
       groupRenderer.renderBeams(canvas, elements, currentClef!);
       groupRenderer.renderTies(canvas, elements, currentClef!);
@@ -186,7 +199,10 @@ class StaffRenderer {
     } else if (element is TimeSignature) {
       barElementRenderer.renderTimeSignature(canvas, element, basePosition);
     } else if (element is Note && currentClef != null) {
-      noteRenderer.render(canvas, element, basePosition, currentClef!);
+      // CORREÇÃO: Não renderizar notas com beam aqui
+      if (element.beam == null) {
+        noteRenderer.render(canvas, element, basePosition, currentClef!);
+      }
     } else if (element is Rest) {
       restRenderer.render(canvas, element, basePosition);
     } else if (element is Barline) {
