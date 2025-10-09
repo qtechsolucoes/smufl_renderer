@@ -22,6 +22,7 @@ import 'examples/tuplets_example.dart';
 import 'examples/flags_vs_beams_example.dart';
 import 'examples/professional_ornaments_example.dart';
 import 'examples/corrected_ornaments_example.dart';
+import 'examples/test_pitch_accuracy.dart';
 
 // Novos exemplos completos
 import 'examples/complete_clefs_demo.dart';
@@ -70,6 +71,7 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
   final List<String> _titles = [
+    '🔍 TESTE: Precisão de Alturas',
     'Claves',
     'Armaduras de Clave',
     'Figuras Rítmicas',
@@ -95,6 +97,7 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   final List<Widget> _pages = const [
+    TestPitchAccuracy(),
     ClefsExample(),
     KeySignaturesExample(),
     RhythmicFiguresExample(),
