@@ -1,26 +1,36 @@
 // lib/src/rendering/renderers/rest_renderer.dart
+// VERSÃO REFATORADA: Herda de BaseGlyphRenderer
+//
+// MELHORIAS IMPLEMENTADAS (Fase 2):
+// ✅ Herda de BaseGlyphRenderer para renderização consistente
+// ✅ Usa drawGlyphWithBBox para 100% conformidade SMuFL
+// ✅ Cache automático de TextPainters para melhor performance
+// ✅ Elimina método _drawGlyph duplicado (30 linhas)
 
 import 'package:flutter/material.dart';
 import '../../music_model/musical_element.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
+import 'base_glyph_renderer.dart';
 import 'ornament_renderer.dart';
 
-class RestRenderer {
-  final StaffCoordinateSystem coordinates;
-  final SmuflMetadata metadata;
+class RestRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
-  final double glyphSize;
   final OrnamentRenderer ornamentRenderer;
 
+  // ignore: use_super_parameters
   RestRenderer({
-    required this.coordinates,
-    required this.metadata,
+    required StaffCoordinateSystem coordinates,
+    required SmuflMetadata metadata,
     required this.theme,
-    required this.glyphSize,
+    required double glyphSize,
     required this.ornamentRenderer,
-  });
+  }) : super(
+         coordinates: coordinates,
+         metadata: metadata,
+         glyphSize: glyphSize,
+       );
 
   void render(Canvas canvas, Rest rest, Offset position) {
     String glyphName;
@@ -76,68 +86,24 @@ class RestRenderer {
 
     final restPosition = Offset(position.dx, restY);
 
-    // CORREÇÃO DEFINITIVA SMuFL: Usar apenas bounding box center, SEM centerVertically
-    // O TextPainter.height não corresponde ao SMuFL bounding box
-    final glyphInfo = metadata.getGlyphInfo(glyphName);
-    double verticalAdjustment = 0;
-
-    if (glyphInfo != null && glyphInfo.hasBoundingBox) {
-      // Usar centro do bounding box SMuFL para alinhamento preciso
-      final bbox = glyphInfo.boundingBox!;
-      // bbox.centerY está em staff spaces, converter para pixels
-      verticalAdjustment = -(bbox.centerY * coordinates.staffSpace);
-    }
-
-    _drawGlyph(
+    // MELHORIA: Usar drawGlyphWithBBox herdado de BaseGlyphRenderer
+    // Isso automaticamente aplica o ajuste de bounding box SMuFL
+    drawGlyphWithBBox(
       canvas,
       glyphName: glyphName,
-      position: Offset(restPosition.dx, restPosition.dy + verticalAdjustment),
-      size: glyphSize,
+      position: restPosition,
       color: theme.restColor,
-      centerVertically: false, // NUNCA usar centerVertically para SMuFL glyphs
-      centerHorizontally: true, // Manter centralização horizontal
+      options: GlyphDrawOptions.restDefault,
     );
 
+    // Renderizar ornamentos se presentes
     if (rest.ornaments.isNotEmpty) {
       final placeholderNote = Note(
         pitch: Pitch(step: 'B', octave: 4), // Posição central da pauta
         duration: rest.duration,
         ornaments: rest.ornaments,
       );
-      // CORREÇÃO: Passando o 'canvas' como primeiro argumento.
       ornamentRenderer.renderForNote(canvas, placeholderNote, restPosition, 0);
     }
-  }
-
-  void _drawGlyph(
-    Canvas canvas, {
-    required String glyphName,
-    required Offset position,
-    required double size,
-    required Color color,
-    bool centerVertically = false,
-    bool centerHorizontally = false,
-  }) {
-    final character = metadata.getCodepoint(glyphName);
-    if (character.isEmpty) return;
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: character,
-        style: TextStyle(
-          fontFamily: 'Bravura',
-          fontSize: size,
-          color: color,
-          height: 1.0,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    double yOffset = centerVertically ? -textPainter.height * 0.5 : 0;
-    double xOffset = centerHorizontally ? -textPainter.width * 0.5 : 0;
-    textPainter.paint(
-      canvas,
-      Offset(position.dx + xOffset, position.dy + yOffset),
-    );
   }
 }

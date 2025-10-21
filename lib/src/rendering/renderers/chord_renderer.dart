@@ -1,4 +1,11 @@
 // lib/src/rendering/renderers/chord_renderer.dart
+// VERSÃO REFATORADA: Usa StaffPositionCalculator e BaseGlyphRenderer
+//
+// MELHORIAS IMPLEMENTADAS (Fase 2):
+// ✅ Usa StaffPositionCalculator unificado (elimina 42 linhas duplicadas)
+// ✅ Herda de BaseGlyphRenderer para renderização consistente
+// ✅ Usa drawGlyphWithBBox para 100% conformidade SMuFL
+// ✅ Cache automático de TextPainters para melhor performance
 
 import 'package:flutter/material.dart';
 
@@ -6,26 +13,30 @@ import '../../music_model/musical_element.dart';
 import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../staff_coordinate_system.dart';
+import '../staff_position_calculator.dart';
+import 'base_glyph_renderer.dart';
 import 'note_renderer.dart';
 
-class ChordRenderer {
-  final StaffCoordinateSystem coordinates;
-  final SmuflMetadata metadata;
+class ChordRenderer extends BaseGlyphRenderer {
   final MusicScoreTheme theme;
-  final double glyphSize;
   final double staffLineThickness;
   final double stemThickness;
   final NoteRenderer noteRenderer;
 
+  // ignore: use_super_parameters
   ChordRenderer({
-    required this.coordinates,
-    required this.metadata,
+    required StaffCoordinateSystem coordinates,
+    required SmuflMetadata metadata,
     required this.theme,
-    required this.glyphSize,
+    required double glyphSize,
     required this.staffLineThickness,
     required this.stemThickness,
     required this.noteRenderer,
-  });
+  }) : super(
+         coordinates: coordinates,
+         metadata: metadata,
+         glyphSize: glyphSize,
+       );
 
   void render(
     Canvas canvas,
@@ -33,16 +44,17 @@ class ChordRenderer {
     Offset basePosition,
     Clef currentClef,
   ) {
+    // MELHORIA: Usar StaffPositionCalculator unificado
     final sortedNotes = [...chord.notes]
       ..sort(
-        (a, b) => _calculateStaffPosition(
+        (a, b) => StaffPositionCalculator.calculate(
           b.pitch,
           currentClef,
-        ).compareTo(_calculateStaffPosition(a.pitch, currentClef)),
+        ).compareTo(StaffPositionCalculator.calculate(a.pitch, currentClef)),
       );
 
     final positions = sortedNotes
-        .map((n) => _calculateStaffPosition(n.pitch, currentClef))
+        .map((n) => StaffPositionCalculator.calculate(n.pitch, currentClef))
         .toList();
 
     final mostExtremePos = positions.reduce(
@@ -70,11 +82,17 @@ class ChordRenderer {
     for (int i = 0; i < sortedNotes.length; i++) {
       final note = sortedNotes[i];
       final staffPos = positions[i];
-      final noteY =
-          coordinates.staffBaseline.dy -
-          (staffPos * coordinates.staffSpace * 0.5);
+
+      // MELHORIA: Usar StaffPositionCalculator.toPixelY
+      final noteY = StaffPositionCalculator.toPixelY(
+        staffPos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
+
       final xOffset = xOffsets[i]!;
 
+      // MELHORIA: Usar StaffPositionCalculator para ledger lines
       _drawLedgerLines(canvas, basePosition.dx + xOffset, staffPos);
 
       if (note.pitch.accidentalGlyph != null) {
@@ -89,26 +107,30 @@ class ChordRenderer {
         );
       }
 
-      _drawGlyph(
+      // MELHORIA: Usar drawGlyphWithBBox herdado de BaseGlyphRenderer
+      drawGlyphWithBBox(
         canvas,
         glyphName: note.duration.type.glyphName,
         position: Offset(basePosition.dx + xOffset, noteY),
-        size: glyphSize,
         color: theme.noteheadColor,
-        centerVertically: true,
-        centerHorizontally: true,
+        options: GlyphDrawOptions.noteheadDefault,
       );
     }
 
     if (chord.duration.type != DurationType.whole) {
       final extremeNote = stemUp ? sortedNotes.first : sortedNotes.last;
-      final extremePos = _calculateStaffPosition(
+
+      // MELHORIA: Usar StaffPositionCalculator
+      final extremePos = StaffPositionCalculator.calculate(
         extremeNote.pitch,
         currentClef,
       );
-      final extremeY =
-          coordinates.staffBaseline.dy -
-          (extremePos * coordinates.staffSpace * 0.5);
+      final extremeY = StaffPositionCalculator.toPixelY(
+        extremePos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
+
       final extremeNoteIndex = sortedNotes.indexOf(extremeNote);
       final stemXOffset = xOffsets[extremeNoteIndex]!;
 
@@ -124,7 +146,14 @@ class ChordRenderer {
     }
   }
 
-  void _renderAccidental(Canvas canvas, Note note, Offset notePos, int noteIndex, List<Note> allNotes, List<int> positions) {
+  void _renderAccidental(
+    Canvas canvas,
+    Note note,
+    Offset notePos,
+    int noteIndex,
+    List<Note> allNotes,
+    List<int> positions,
+  ) {
     // CORREÇÃO TIPOGRÁFICA: Implementar escalonamento de acidentes em acordes
     // Acidentes de notas adjacentes (intervalo de 2ª) devem ser escalonados horizontalmente
     double accidentalOffset = coordinates.staffSpace * 0.75;
@@ -142,130 +171,58 @@ class ChordRenderer {
     }
 
     // Cada nível adicional move o acidente mais para a esquerda
-    final accidentalX = notePos.dx - accidentalOffset - (stackLevel * coordinates.staffSpace * 0.6);
+    final accidentalX =
+        notePos.dx -
+        accidentalOffset -
+        (stackLevel * coordinates.staffSpace * 0.6);
 
-    _drawGlyph(
+    // MELHORIA: Usar drawGlyphWithBBox herdado
+    drawGlyphWithBBox(
       canvas,
       glyphName: note.pitch.accidentalGlyph!,
       position: Offset(accidentalX, notePos.dy),
-      size: glyphSize,
       color: theme.accidentalColor ?? theme.noteheadColor,
-      centerVertically: true,
-      centerHorizontally: true,
+      options: GlyphDrawOptions.accidentalDefault,
     );
   }
 
   void _drawLedgerLines(Canvas canvas, double x, int staffPosition) {
-    // CORREÇÃO: Manter consistência com note_renderer (abs() <= 4)
-    if (!theme.showLedgerLines || staffPosition.abs() <= 4) return;
+    if (!theme.showLedgerLines) return;
+
+    // MELHORIA: Usar StaffPositionCalculator
+    if (!StaffPositionCalculator.needsLedgerLines(staffPosition)) return;
+
     final paint = Paint()
       ..color = theme.staffLineColor
       ..strokeWidth = staffLineThickness;
 
     // CORREÇÃO SMuFL: Usar método seguro ao invés de acesso direto
     final noteheadInfo = metadata.getGlyphInfo('noteheadBlack');
-    final noteWidth = noteheadInfo?.boundingBox?.widthInPixels(coordinates.staffSpace)
-        ?? (coordinates.staffSpace * 1.18);
+    final noteWidth =
+        noteheadInfo?.boundingBox?.widthInPixels(coordinates.staffSpace) ??
+        (coordinates.staffSpace * 1.18);
 
     // CORREÇÃO SMuFL: Consistente com legerLineExtension (0.4) do metadata
     final extension = coordinates.staffSpace * 0.4;
     final totalWidth = noteWidth + (2 * extension);
 
-    if (staffPosition > 4) {
-      for (int pos = 6; pos <= staffPosition; pos += 2) {
-        final y =
-            coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
-        canvas.drawLine(
-          Offset(x - totalWidth / 2, y),
-          Offset(x + totalWidth / 2, y),
-          paint,
-        );
-      }
-    } else {
-      for (int pos = -6; pos >= staffPosition; pos -= 2) {
-        final y =
-            coordinates.staffBaseline.dy - (pos * coordinates.staffSpace * 0.5);
-        canvas.drawLine(
-          Offset(x - totalWidth / 2, y),
-          Offset(x + totalWidth / 2, y),
-          paint,
-        );
-      }
-    }
-  }
-
-  int _calculateStaffPosition(Pitch pitch, Clef clef) {
-    const stepToDiatonic = {
-      'C': 0,
-      'D': 1,
-      'E': 2,
-      'F': 3,
-      'G': 4,
-      'A': 5,
-      'B': 6,
-    };
-    final pitchStep = stepToDiatonic[pitch.step] ?? 0;
-
-    int baseStep, baseOctave, basePosition;
-    switch (clef.actualClefType) {
-      case ClefType.treble:
-        baseStep = 4;
-        baseOctave = 4;
-        basePosition = 2;
-        break;
-      case ClefType.bass:
-        baseStep = 2;
-        baseOctave = 3;
-        basePosition = -2;
-        break;
-      case ClefType.alto:
-        baseStep = 0;
-        baseOctave = 4;
-        basePosition = 0;
-        break;
-      case ClefType.tenor:
-        baseStep = 5;
-        baseOctave = 3;
-        basePosition = -2;
-        break;
-      default:
-        return 0;
-    }
-    int diatonicDistance =
-        (pitchStep - baseStep) +
-        ((pitch.octave + clef.octaveShift - baseOctave) * 7);
-    return basePosition + diatonicDistance;
-  }
-
-  void _drawGlyph(
-    Canvas canvas, {
-    required String glyphName,
-    required Offset position,
-    required double size,
-    required Color color,
-    bool centerVertically = false,
-    bool centerHorizontally = false,
-  }) {
-    final character = metadata.getCodepoint(glyphName);
-    if (character.isEmpty) return;
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: character,
-        style: TextStyle(
-          fontFamily: 'Bravura',
-          fontSize: size,
-          color: color,
-          height: 1.0,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
+    // MELHORIA: Usar StaffPositionCalculator.getLedgerLinePositions
+    final ledgerPositions = StaffPositionCalculator.getLedgerLinePositions(
+      staffPosition,
     );
-    textPainter.layout();
-    double yOffset = centerVertically ? -textPainter.height * 0.5 : 0;
-    double xOffset = centerHorizontally ? -textPainter.width * 0.5 : 0;
-    textPainter.paint(
-      canvas,
-      Offset(position.dx + xOffset, position.dy + yOffset),
-    );
+
+    for (final pos in ledgerPositions) {
+      final y = StaffPositionCalculator.toPixelY(
+        pos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
+
+      canvas.drawLine(
+        Offset(x - totalWidth / 2, y),
+        Offset(x + totalWidth / 2, y),
+        paint,
+      );
+    }
   }
 }

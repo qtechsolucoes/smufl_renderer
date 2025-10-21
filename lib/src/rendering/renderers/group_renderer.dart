@@ -1,4 +1,10 @@
 // lib/src/rendering/renderers/group_renderer.dart
+// VERSÃO REFATORADA: Usa StaffPositionCalculator
+//
+// MELHORIAS IMPLEMENTADAS (Fase 2):
+// ✅ Usa StaffPositionCalculator unificado (elimina 41 linhas duplicadas)
+// ✅ Corrige possível bug de sinal invertido no cálculo de posição
+// ✅ 100% conformidade com sistema unificado de posicionamento
 
 import 'package:flutter/material.dart';
 import '../../layout/layout_engine.dart';
@@ -7,6 +13,7 @@ import '../../smufl/smufl_metadata_loader.dart';
 import '../../theme/music_score_theme.dart';
 import '../smufl_positioning_engine.dart';
 import '../staff_coordinate_system.dart';
+import '../staff_position_calculator.dart';
 
 class GroupRenderer {
   final StaffCoordinateSystem coordinates;
@@ -72,10 +79,13 @@ class GroupRenderer {
         groupElements.add(element);
         if (element.element is Note) {
           final note = element.element as Note;
-          final staffPos = _calculateStaffPosition(note.pitch, currentClef);
-          final noteY =
-              coordinates.staffBaseline.dy -
-              (staffPos * coordinates.staffSpace * 0.5);
+          // MELHORIA: Usar StaffPositionCalculator unificado
+          final staffPos = StaffPositionCalculator.calculate(note.pitch, currentClef);
+          final noteY = StaffPositionCalculator.toPixelY(
+            staffPos,
+            coordinates.staffSpace,
+            coordinates.staffBaseline.dy,
+          );
           positions.add(Offset(element.position.dx, noteY));
           staffPositions.add(staffPos);
           durations.add(note.duration.type);
@@ -125,7 +135,11 @@ class GroupRenderer {
     for (int i = 0; i < positions.length; i++) {
       final element = groupElements[i].element as Note;
       final noteGlyph = durations[i].glyphName;
-      final staffPos = _calculateStaffPosition(element.pitch, Clef(clefType: ClefType.treble));
+      // MELHORIA: Usar StaffPositionCalculator
+      final staffPos = StaffPositionCalculator.calculate(
+        element.pitch,
+        Clef(clefType: ClefType.treble),
+      );
 
       staffPositions.add(staffPos);
 
@@ -280,7 +294,8 @@ class GroupRenderer {
       }
 
       final startNote = startElement.element as Note;
-      final startStaffPos = _calculateStaffPosition(
+      // MELHORIA: Usar StaffPositionCalculator
+      final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
       );
@@ -290,17 +305,21 @@ class GroupRenderer {
       final stemUp = startStaffPos <= 0; // Haste para cima quando nota está abaixo/na linha central
       final tieAbove = !stemUp; // Ligadura oposta à haste
 
-      final startNoteY =
-          coordinates.staffBaseline.dy -
-          (startStaffPos * coordinates.staffSpace * 0.5);
-      final endNoteY =
-          coordinates.staffBaseline.dy -
-          (_calculateStaffPosition(
-                (endElement.element as Note).pitch,
-                currentClef,
-              ) *
-              coordinates.staffSpace *
-              0.5);
+      // MELHORIA: Usar StaffPositionCalculator.toPixelY
+      final startNoteY = StaffPositionCalculator.toPixelY(
+        startStaffPos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
+      final endStaffPos = StaffPositionCalculator.calculate(
+        (endElement.element as Note).pitch,
+        currentClef,
+      );
+      final endNoteY = StaffPositionCalculator.toPixelY(
+        endStaffPos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
       final noteWidth = coordinates.staffSpace * 1.18;
 
       // CORREÇÃO: Ligadura começa e termina nas bordas das cabeças
@@ -384,23 +403,29 @@ class GroupRenderer {
       }
       final startNote = startElement.element as Note;
       final endNote = endElement.element as Note;
-      final startStaffPos = _calculateStaffPosition(
+      // MELHORIA: Usar StaffPositionCalculator
+      final startStaffPos = StaffPositionCalculator.calculate(
         startNote.pitch,
         currentClef,
       );
-      final endStaffPos = _calculateStaffPosition(endNote.pitch, currentClef);
+      final endStaffPos = StaffPositionCalculator.calculate(endNote.pitch, currentClef);
 
       // CORREÇÃO LACERDA: Ligadura de expressão segue mesma regra de tie
       // Oposta à direção das hastes
       final startStemUp = startStaffPos <= 0;
       final slurAbove = !startStemUp;
 
-      final startNoteY =
-          coordinates.staffBaseline.dy -
-          (startStaffPos * coordinates.staffSpace * 0.5);
-      final endNoteY =
-          coordinates.staffBaseline.dy -
-          (endStaffPos * coordinates.staffSpace * 0.5);
+      // MELHORIA: Usar StaffPositionCalculator.toPixelY
+      final startNoteY = StaffPositionCalculator.toPixelY(
+        startStaffPos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
+      final endNoteY = StaffPositionCalculator.toPixelY(
+        endStaffPos,
+        coordinates.staffSpace,
+        coordinates.staffBaseline.dy,
+      );
 
       final noteWidth = coordinates.staffSpace * 1.18;
 
@@ -451,45 +476,6 @@ class GroupRenderer {
     }
   }
 
-  int _calculateStaffPosition(Pitch pitch, Clef clef) {
-    const stepToDiatonic = {
-      'C': 0,
-      'D': 1,
-      'E': 2,
-      'F': 3,
-      'G': 4,
-      'A': 5,
-      'B': 6,
-    };
-    final pitchStep = stepToDiatonic[pitch.step] ?? 0;
-    int baseStep, baseOctave, basePosition;
-    switch (clef.actualClefType) {
-      case ClefType.treble:
-        baseStep = 6;
-        baseOctave = 4;
-        basePosition = 0;
-        break;
-      case ClefType.bass:
-        baseStep = 1;
-        baseOctave = 3;
-        basePosition = 0;
-        break;
-      case ClefType.alto:
-        baseStep = 0;
-        baseOctave = 4;
-        basePosition = 0;
-        break;
-      case ClefType.tenor:
-        baseStep = 5;
-        baseOctave = 3;
-        basePosition = 0;
-        break;
-      default:
-        return 0;
-    }
-    int diatonicDistance =
-        (pitchStep - baseStep) +
-        ((pitch.octave + clef.octaveShift - baseOctave) * 7);
-    return basePosition - diatonicDistance;
-  }
+  // REMOVIDO: _calculateStaffPosition duplicado (41 linhas)
+  // AGORA USA: StaffPositionCalculator unificado
 }

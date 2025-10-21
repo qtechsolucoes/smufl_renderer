@@ -16,6 +16,11 @@ export 'src/layout/layout_engine.dart';
 export 'src/parsers/json_parser.dart';
 export 'src/smufl/glyph_categories.dart';
 export 'src/smufl/smufl_metadata_loader.dart';
+export 'src/rendering/staff_position_calculator.dart';
+export 'src/rendering/staff_coordinate_system.dart';
+export 'src/rendering/staff_renderer.dart';
+export 'src/rendering/renderers/base_glyph_renderer.dart';
+export 'src/rendering/collision_detector.dart';
 
 /// Widget principal para renderização de partituras musicais
 /// VERSÃO CORRIGIDA E COMPLETA
